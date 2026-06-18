@@ -15,6 +15,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { fetchGA4Data } from './ga4'
 
 // --- Types -----------------------------------------------------------------
 
@@ -101,11 +102,12 @@ const SEED = {
   },
 }
 
-// TODO(phase 2): replace this with `await fetchHistoryFromNeon()` — query the
-// metric history table the /api/sync cron writes (GA4 + HubSpot). Keep the same
-// { value, history } shape per metric and the rest of this module is unchanged.
 function loadSeed() {
   return { data: SEED, lastUpdated: SEED_LAST_UPDATED, seeded: true }
+}
+
+function hasGA4Creds() {
+  return !!(process.env.GA4_PROPERTY_ID && process.env.GA4_SERVICE_ACCOUNT_KEY)
 }
 
 // --- Meta (manual config file) ---------------------------------------------
@@ -133,9 +135,26 @@ function getMeta(): MetaData {
  * Neon read can drop in without changing callers.
  */
 export async function getDashboardData(): Promise<DashboardData> {
-  const { data, lastUpdated, seeded } = loadSeed()
   const meta = getMeta()
 
+  if (hasGA4Creds()) {
+    const ga4 = await fetchGA4Data()
+    // Form submissions still come from seed until HubSpot is wired
+    const formSubmissions = SEED.atmSocial.formSubmissions
+    const pageViews = ga4.atmSocial.pageViews.value
+    const submissions = formSubmissions.value
+    const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
+
+    return {
+      atmSocial: { ...ga4.atmSocial, formSubmissions, conversionRate },
+      atTheMovies: ga4.atTheMovies,
+      meta,
+      lastUpdated: ga4.lastUpdated,
+      seeded: false,
+    }
+  }
+
+  const { data, lastUpdated, seeded } = loadSeed()
   const pageViews = data.atmSocial.pageViews.value
   const submissions = data.atmSocial.formSubmissions.value
   const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
