@@ -1,8 +1,15 @@
 {
-  "last_updated": "2026-06-16",
-  "landing_page_views": 1744,
+  "last_updated": "2026-06-18",
+  "landing_page_views": 2611,
   "note": "Manually entered from Meta Ads Manager. Replace with API once app review clears.",
   "history": [
-    { "date": "2026-06-16", "landing_page_views": 1744 }
+    { "date": "2026-06-11", "landing_page_views": 348 },
+    { "date": "2026-06-12", "landing_page_views": 728 },
+    { "date": "2026-06-13", "landing_page_views": 1070 },
+    { "date": "2026-06-14", "landing_page_views": 1432 },
+    { "date": "2026-06-15", "landing_page_views": 1744 },
+    { "date": "2026-06-16", "landing_page_views": 2095 },
+    { "date": "2026-06-17", "landing_page_views": 2489 },
+    { "date": "2026-06-18", "landing_page_views": 2611 }
   ]
 }
