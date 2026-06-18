@@ -1,63 +1,58 @@
-// Design tokens — single source of truth for the brand/design system.
+// Design tokens — single source of truth for the ATM dashboard look & feel.
+// Deliberately distinct from the CIP (community-demographic-tool) dark theme:
+// this is a LIGHT, editorial dashboard — warm paper background, white cards with
+// soft shadows, a serif display face, and a cinematic accent palette.
 // Pure constants (no React/DOM imports) so they're usable anywhere.
-// Mirrors the "Brand / design system" section of CLAUDE.md.
 
 export const colors = {
-  // Surfaces
-  bg:         '#0d0f14',
-  surface:    '#13161f',
-  border:     '#232940',
-  borderSub:  '#1e2b3c',
+  // Surfaces (light)
+  bg:          '#F4F1EA', // warm paper
+  bgAlt:       '#EEEAE0',
+  surface:     '#FFFFFF',
+  surfaceAlt:  '#FBFAF6',
+  border:      '#E7E1D5',
+  borderStrong:'#D8D1C1',
 
-  // Accent palette
-  gold:       '#E8B84B', // primary
-  blue:       '#4EAEFF',
-  teal:       '#2DD4BF',
-  coral:      '#FF6B6B',
-  purple:     '#A78BFA',
+  // Accent palette — cinematic
+  red:    '#CB4231', // primary (curtain red)
+  navy:   '#2B3A67',
+  teal:   '#0E8C7F',
+  amber:  '#D9952B',
+  violet: '#6C56C9',
 
-  // Text
-  textStrong: '#F0F2F7',
-  text:       '#C8D4E4',
-  label:      '#A8B4C5',
-  muted:      '#8A98AE', // ~6.5:1 on bg — passes WCAG AA
-  footer:     '#7A8699', // bumped from #5a6478 (~3.2:1, failed AA) → ~5.2:1 for 55+ readability
-  faint:      '#6E7C92', // bumped from #3d4a5c (~2:1, failed AA) → ~4.5:1 (AA floor)
+  // Ink / text (dark on light)
+  ink:    '#1C1A16', // strongest — headings, big numbers
+  body:   '#45413A', // body copy
+  label:  '#6E6759', // labels / captions
+  muted:  '#8B8475', // secondary captions (passes AA on paper)
+  faint:  '#A69E8D', // separators / faintest text
 } as const
 
 export const fonts = {
-  display: "'Bebas Neue',sans-serif",       // display / big numbers
-  mono:    "'IBM Plex Mono',monospace",      // labels / data
-  sans:    "'IBM Plex Sans',sans-serif",     // body
+  display: "'Fraunces', Georgia, 'Times New Roman', serif", // headings + big numbers
+  sans:    "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", // body + labels
 } as const
 
-// Comma-separated RGB strings for rgba() composition (radial-glow cards).
+// Soft elevation shadows for the light surfaces.
+export const shadow = {
+  sm:  '0 1px 2px rgba(28,26,22,0.05), 0 1px 3px rgba(28,26,22,0.04)',
+  md:  '0 2px 4px rgba(28,26,22,0.04), 0 8px 20px rgba(28,26,22,0.05)',
+  lg:  '0 6px 16px rgba(28,26,22,0.08), 0 16px 40px rgba(28,26,22,0.08)',
+} as const
+
+// Flat surface background for panels/cards.
+export const CARD_BG = colors.surface
+
+// Comma-separated RGB strings for rgba() composition (accent tints).
 export const rgbMap: Record<string, string> = {
-  [colors.gold]:   '232,184,75',
-  [colors.blue]:   '78,174,255',
-  [colors.teal]:   '45,212,191',
-  [colors.purple]: '167,139,250',
-  [colors.coral]:  '255,107,107',
+  [colors.red]:    '203,66,49',
+  [colors.navy]:   '43,58,103',
+  [colors.teal]:   '14,140,127',
+  [colors.amber]:  '217,149,43',
+  [colors.violet]: '108,86,201',
 }
 
-// Returns the comma-separated RGB for a hex from the palette (defaults to gold).
+// Returns the comma-separated RGB for a hex from the palette (defaults to red).
 export function toRgb(hex: string): string {
-  return rgbMap[hex] ?? rgbMap[colors.gold]
-}
-
-// Flat surface gradient used by Surface panels + stat-card base layer.
-export const CARD_BG =
-  'linear-gradient(145deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.01) 100%)'
-
-// Stat-card radial-glow background (idle vs hovered) from a comma-separated
-// RGB string (e.g. '232,184,75').
-export function cardGlowRgb(rgb: string, hovered: boolean): string {
-  return hovered
-    ? `radial-gradient(ellipse at 50% 0%,rgba(${rgb},0.22) 0%,transparent 60%),linear-gradient(145deg,rgba(${rgb},0.08) 0%,rgba(255,255,255,0.01) 100%)`
-    : `radial-gradient(ellipse at 50% 0%,rgba(${rgb},0.1) 0%,transparent 55%),${CARD_BG}`
-}
-
-// Same glow keyed off a palette hex.
-export function cardGlow(hex: string, hovered: boolean): string {
-  return cardGlowRgb(toRgb(hex), hovered)
+  return rgbMap[hex] ?? rgbMap[colors.red]
 }

@@ -3,7 +3,7 @@
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { colors, fonts, toRgb } from '@/lib/theme'
+import { colors, fonts, shadow, toRgb } from '@/lib/theme'
 import type { MetricPoint } from '@/lib/data'
 
 export type Series = {
@@ -44,16 +44,17 @@ function ChartTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null
   return (
     <div style={{
-      background: '#13161f', border: `1px solid ${colors.border}`, borderRadius: '4px',
-      padding: '10px 12px', fontFamily: fonts.mono, fontSize: '11px',
+      background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '10px',
+      padding: '10px 12px', fontFamily: fonts.sans, fontSize: '11.5px',
+      boxShadow: shadow.md,
     }}>
-      <div style={{ color: colors.label, marginBottom: 6, letterSpacing: '0.06em' }}>
+      <div style={{ color: colors.label, marginBottom: 6, letterSpacing: '0.04em', fontWeight: 600 }}>
         {label ? shortDate(label) : ''}
       </div>
       {payload.map((p) => (
-        <div key={p.name} style={{ color: p.color, display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+        <div key={p.name} style={{ color: p.color, display: 'flex', justifyContent: 'space-between', gap: 16, fontWeight: 500 }}>
           <span>{p.name}</span>
-          <span style={{ color: colors.textStrong }}>{p.value.toLocaleString()}</span>
+          <span style={{ color: colors.ink, fontWeight: 600 }}>{p.value.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -66,21 +67,21 @@ export function TrendChart({ series, height = 240 }: { series: Series[]; height?
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-        <CartesianGrid stroke={colors.borderSub} strokeDasharray="3 3" vertical={false} />
+        <CartesianGrid stroke={colors.border} strokeDasharray="3 3" vertical={false} />
         <XAxis
           dataKey="date" tickFormatter={shortDate}
-          tick={{ fill: colors.muted, fontFamily: fonts.mono, fontSize: 10 }}
-          stroke={colors.border} tickLine={false}
+          tick={{ fill: colors.muted, fontFamily: fonts.sans, fontSize: 11 }}
+          stroke={colors.borderStrong} tickLine={false}
         />
         <YAxis
-          tick={{ fill: colors.muted, fontFamily: fonts.mono, fontSize: 10 }}
-          stroke={colors.border} tickLine={false} width={44}
+          tick={{ fill: colors.muted, fontFamily: fonts.sans, fontSize: 11 }}
+          stroke={colors.borderStrong} tickLine={false} width={44}
           tickFormatter={(v: number) => v.toLocaleString()}
         />
-        <Tooltip content={<ChartTooltip />} />
+        <Tooltip content={<ChartTooltip />} cursor={{ stroke: colors.borderStrong, strokeWidth: 1 }} />
         {multi && (
           <Legend
-            wrapperStyle={{ fontFamily: fonts.mono, fontSize: 10, letterSpacing: '0.06em', paddingTop: 8 }}
+            wrapperStyle={{ fontFamily: fonts.sans, fontSize: 11, fontWeight: 500, letterSpacing: '0.02em', paddingTop: 8 }}
           />
         )}
         {series.map((s) => (

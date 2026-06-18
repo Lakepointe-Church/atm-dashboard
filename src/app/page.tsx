@@ -1,5 +1,5 @@
 import { getDashboardData } from '@/lib/data'
-import { colors, fonts } from '@/lib/theme'
+import { colors, fonts, shadow } from '@/lib/theme'
 import { StatCard } from '@/components/ui/StatCard'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Surface } from '@/components/ui/Surface'
@@ -38,52 +38,57 @@ export default async function DashboardPage() {
       padding: '48px 24px 80px',
     }}>
       {/* ── Header ─────────────────────────────────────────── */}
-      <header className="fade-up" style={{ marginBottom: '40px' }}>
+      <header className="fade-up" style={{ marginBottom: '44px' }}>
         <div style={{
-          fontFamily: fonts.mono, fontSize: '10px', letterSpacing: '0.18em',
-          color: colors.gold, textTransform: 'uppercase', marginBottom: '12px',
+          fontFamily: fonts.sans, fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em',
+          color: colors.red, textTransform: 'uppercase', marginBottom: '14px',
         }}>
           Lakepointe Church · Campaign Analytics
         </div>
         <h1 style={{
-          fontFamily: fonts.display, fontSize: '52px', letterSpacing: '0.02em',
-          color: colors.textStrong, lineHeight: 1, marginBottom: '12px',
+          fontFamily: fonts.display, fontWeight: 600, fontSize: '54px', letterSpacing: '-0.02em',
+          color: colors.ink, lineHeight: 1.04, marginBottom: '14px', maxWidth: '16ch',
         }}>
-          At the Movies — Campaign Dashboard
+          At the Movies
         </h1>
-        <div style={{ fontFamily: fonts.sans, fontSize: '15px', color: colors.label, marginBottom: '14px' }}>
-          Campaign dates: {CAMPAIGN_DATES}
+        <div style={{ fontFamily: fonts.sans, fontSize: '15px', color: colors.body, marginBottom: '18px' }}>
+          Campaign performance · {CAMPAIGN_DATES}
         </div>
-        <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.footer, letterSpacing: '0.04em' }}>
-          Last sync: {prettyDate(d.lastUpdated)}
-          <span style={{ color: colors.faint }}> · </span>
-          Meta updated manually: {prettyDate(d.meta.lastUpdated)}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 14px',
+          fontFamily: fonts.sans, fontSize: '12px', color: colors.label,
+          background: colors.surface, border: `1px solid ${colors.border}`,
+          borderRadius: '999px', padding: '8px 16px', boxShadow: shadow.sm,
+        }}>
+          <span>Last sync <strong style={{ color: colors.body, fontWeight: 600 }}>{prettyDate(d.lastUpdated)}</strong></span>
+          <span style={{ color: colors.faint }}>·</span>
+          <span>Meta updated <strong style={{ color: colors.body, fontWeight: 600 }}>{prettyDate(d.meta.lastUpdated)}</strong></span>
           {d.seeded && (
             <>
-              <span style={{ color: colors.faint }}> · </span>
-              <span style={{ color: colors.gold }}>seeded preview — automated syncs not yet live</span>
+              <span style={{ color: colors.faint }}>·</span>
+              <span style={{ color: colors.red, fontWeight: 600 }}>Seeded preview — syncs not yet live</span>
             </>
           )}
         </div>
       </header>
 
       {/* ── Headline numbers ───────────────────────────────── */}
-      <section className="fade-up-2" style={{ marginBottom: '20px' }}>
-        <SectionHeader title="Ad Landing Page — atm-social" sub="Traffic driven by Meta ads" marginBottom="14px" />
-        <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '14px' }}>
-          <StatCard label="GA4 Page Views" value={fmt(d.atmSocial.pageViews.value)} color={colors.gold} />
-          <StatCard label="GA4 Active Users" value={fmt(d.atmSocial.activeUsers.value)} color={colors.blue} />
+      <section className="fade-up-2" style={{ marginBottom: '24px' }}>
+        <SectionHeader title="Ad Landing Page" sub="atm-social · traffic driven by Meta ads" marginBottom="16px" />
+        <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
+          <StatCard label="GA4 Page Views" value={fmt(d.atmSocial.pageViews.value)} color={colors.red} />
+          <StatCard label="GA4 Active Users" value={fmt(d.atmSocial.activeUsers.value)} color={colors.navy} />
           <StatCard label="Form Submissions" value={fmt(d.atmSocial.formSubmissions.value)} sub="HubSpot" color={colors.teal} />
-          <StatCard label="Form Conversion" value={`${d.atmSocial.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.purple} />
-          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="manual entry" color={colors.coral} />
+          <StatCard label="Form Conversion" value={`${d.atmSocial.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.violet} />
+          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="manual entry" color={colors.amber} />
         </div>
       </section>
 
-      <section className="fade-up-2" style={{ marginBottom: '44px' }}>
-        <SectionHeader title="Member Page — at-the-movies" sub="Lakepointe member-facing page" marginBottom="14px" />
-        <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '14px' }}>
-          <StatCard label="GA4 Page Views" value={fmt(d.atTheMovies.pageViews.value)} color={colors.gold} />
-          <StatCard label="GA4 Active Users" value={fmt(d.atTheMovies.activeUsers.value)} color={colors.blue} />
+      <section className="fade-up-2" style={{ marginBottom: '48px' }}>
+        <SectionHeader title="Member Page" sub="at-the-movies · Lakepointe member-facing page" accent={colors.navy} marginBottom="16px" />
+        <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
+          <StatCard label="GA4 Page Views" value={fmt(d.atTheMovies.pageViews.value)} color={colors.red} />
+          <StatCard label="GA4 Active Users" value={fmt(d.atTheMovies.activeUsers.value)} color={colors.navy} />
         </div>
       </section>
 
@@ -95,29 +100,29 @@ export default async function DashboardPage() {
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
-          <ChartPanel title="Page Views">
+          <ChartPanel title="Page Views" accent={colors.red}>
             <TrendChart series={[
-              { key: 'atmSocial', label: 'atm-social', color: colors.gold, data: d.atmSocial.pageViews.history },
-              { key: 'atTheMovies', label: 'at-the-movies', color: colors.blue, data: d.atTheMovies.pageViews.history },
+              { key: 'atmSocial', label: 'atm-social', color: colors.red, data: d.atmSocial.pageViews.history },
+              { key: 'atTheMovies', label: 'at-the-movies', color: colors.navy, data: d.atTheMovies.pageViews.history },
             ]} />
           </ChartPanel>
 
-          <ChartPanel title="Active Users">
+          <ChartPanel title="Active Users" accent={colors.navy}>
             <TrendChart series={[
-              { key: 'atmSocial', label: 'atm-social', color: colors.gold, data: d.atmSocial.activeUsers.history },
-              { key: 'atTheMovies', label: 'at-the-movies', color: colors.blue, data: d.atTheMovies.activeUsers.history },
+              { key: 'atmSocial', label: 'atm-social', color: colors.red, data: d.atmSocial.activeUsers.history },
+              { key: 'atTheMovies', label: 'at-the-movies', color: colors.navy, data: d.atTheMovies.activeUsers.history },
             ]} />
           </ChartPanel>
 
-          <ChartPanel title="Form Submissions — atm-social">
+          <ChartPanel title="Form Submissions — atm-social" accent={colors.teal}>
             <TrendChart series={[
               { key: 'submissions', label: 'submissions', color: colors.teal, data: d.atmSocial.formSubmissions.history },
             ]} />
           </ChartPanel>
 
-          <ChartPanel title="Meta Landing Page Views — manual">
+          <ChartPanel title="Meta Landing Page Views — manual" accent={colors.amber}>
             <TrendChart series={[
-              { key: 'meta', label: 'landing views', color: colors.coral, data: d.meta.history },
+              { key: 'meta', label: 'landing views', color: colors.amber, data: d.meta.history },
             ]} />
           </ChartPanel>
         </div>
@@ -125,15 +130,15 @@ export default async function DashboardPage() {
 
       {/* ── Footnotes ──────────────────────────────────────── */}
       <section className="fade-up-4">
-        <SectionHeader title="How to read these numbers" marginBottom="12px" />
-        <Surface padding="20px 24px">
-          <ul style={{ listStyle: 'none', display: 'grid', gap: '10px' }}>
+        <SectionHeader title="How to read these numbers" accent={colors.amber} marginBottom="14px" />
+        <Surface padding="22px 26px">
+          <ul style={{ listStyle: 'none', display: 'grid', gap: '12px' }}>
             {FOOTNOTES.map((note, i) => (
               <li key={i} style={{
-                fontFamily: fonts.sans, fontSize: '13px', color: colors.text,
-                lineHeight: 1.55, paddingLeft: '18px', position: 'relative',
+                fontFamily: fonts.sans, fontSize: '13.5px', color: colors.body,
+                lineHeight: 1.55, paddingLeft: '20px', position: 'relative',
               }}>
-                <span style={{ position: 'absolute', left: 0, color: colors.gold }}>•</span>
+                <span style={{ position: 'absolute', left: 0, top: '1px', color: colors.red, fontWeight: 700 }}>•</span>
                 {note}
               </li>
             ))}
@@ -144,14 +149,17 @@ export default async function DashboardPage() {
   )
 }
 
-function ChartPanel({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartPanel({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
   return (
-    <Surface padding="20px 20px 12px">
-      <div style={{
-        fontFamily: fonts.mono, fontSize: '10px', letterSpacing: '0.14em',
-        color: colors.muted, textTransform: 'uppercase', marginBottom: '14px',
-      }}>
-        {title}
+    <Surface padding="20px 22px 14px">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '16px' }}>
+        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: accent }} />
+        <div style={{
+          fontFamily: fonts.sans, fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em',
+          color: colors.body, textTransform: 'uppercase',
+        }}>
+          {title}
+        </div>
       </div>
       {children}
     </Surface>
