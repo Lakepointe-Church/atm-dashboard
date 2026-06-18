@@ -110,6 +110,20 @@ function hasGA4Creds() {
   return !!(process.env.GA4_PROPERTY_ID && process.env.GA4_SERVICE_ACCOUNT_KEY)
 }
 
+// --- HubSpot (manual config file until Private App access is approved) -----
+
+function getHubspot(): Metric {
+  const file = path.join(process.cwd(), 'data', 'hubspot.json')
+  const raw = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
+    form_submissions: number
+    history: { date: string; form_submissions: number }[]
+  }
+  return {
+    value: raw.form_submissions,
+    history: raw.history.map((h) => ({ date: h.date, value: h.form_submissions })),
+  }
+}
+
 // --- Meta (manual config file) ---------------------------------------------
 
 function getMeta(): MetaData {
@@ -139,8 +153,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   if (hasGA4Creds()) {
     const ga4 = await fetchGA4Data()
-    // Form submissions still come from seed until HubSpot is wired
-    const formSubmissions = SEED.atmSocial.formSubmissions
+    const formSubmissions = getHubspot()
     const pageViews = ga4.atmSocial.pageViews.value
     const submissions = formSubmissions.value
     const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
@@ -155,12 +168,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   const { data, lastUpdated, seeded } = loadSeed()
+  const formSubmissions = getHubspot()
   const pageViews = data.atmSocial.pageViews.value
-  const submissions = data.atmSocial.formSubmissions.value
+  const submissions = formSubmissions.value
   const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
 
   return {
-    atmSocial: { ...data.atmSocial, conversionRate },
+    atmSocial: { ...data.atmSocial, formSubmissions, conversionRate },
     atTheMovies: data.atTheMovies,
     meta,
     lastUpdated,
