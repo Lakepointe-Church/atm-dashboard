@@ -16,6 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fetchGA4Data } from './ga4'
+import { fetchHubspotSubmissionCount } from './hubspot'
 
 // --- Types -----------------------------------------------------------------
 
@@ -112,16 +113,24 @@ function hasGA4Creds() {
 
 // --- HubSpot (manual config file until Private App access is approved) -----
 
-function getHubspot(): Metric {
+async function getHubspot(): Promise<Metric> {
   const file = path.join(process.cwd(), 'data', 'hubspot.json')
   const raw = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
     form_submissions: number
     history: { date: string; form_submissions: number }[]
   }
-  return {
-    value: raw.form_submissions,
-    history: raw.history.map((h) => ({ date: h.date, value: h.form_submissions })),
+  const history = raw.history.map((h) => ({ date: h.date, value: h.form_submissions }))
+
+  if (process.env.HUBSPOT_PRIVATE_APP_TOKEN) {
+    try {
+      const liveTotal = await fetchHubspotSubmissionCount()
+      return { value: liveTotal, history }
+    } catch (err) {
+      console.error('[HubSpot] falling back to hubspot.json:', err)
+    }
   }
+
+  return { value: raw.form_submissions, history }
 }
 
 // --- Meta (manual config file) ---------------------------------------------
@@ -153,7 +162,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   if (hasGA4Creds()) {
     const ga4 = await fetchGA4Data()
-    const formSubmissions = getHubspot()
+    const formSubmissions = await getHubspot()
     const pageViews = ga4.atmSocial.pageViews.value
     const submissions = formSubmissions.value
     const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
@@ -168,7 +177,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   const { data, lastUpdated, seeded } = loadSeed()
-  const formSubmissions = getHubspot()
+  const formSubmissions = await getHubspot()
   const pageViews = data.atmSocial.pageViews.value
   const submissions = formSubmissions.value
   const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
