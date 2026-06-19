@@ -29,7 +29,7 @@
       "id": "vid1",
       "name": "VID 1",
       "status": "active",
-      "utm_content": null,
+      "utm_content": "vid1",
       "impressions": 4044,
       "outbound_clicks": null,
       "landing_page_views": 74,
