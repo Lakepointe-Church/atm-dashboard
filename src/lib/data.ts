@@ -17,6 +17,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fetchGA4Data } from './ga4'
 import { fetchHubspotSubmissionCount } from './hubspot'
+import { getHistory } from './db'
 
 // --- Types -----------------------------------------------------------------
 
@@ -151,27 +152,82 @@ function getMeta(): MetaData {
   }
 }
 
+// --- Neon history ----------------------------------------------------------
+
+function buildMetricFromRows(
+  rows: { date: string; value: number }[],
+  liveValue: number
+): Metric {
+  return { value: liveValue, history: rows.map(r => ({ date: r.date, value: r.value })) }
+}
+
+async function loadNeonHistory(): Promise<{
+  atmSocial: { pageViews: MetricPoint[]; activeUsers: MetricPoint[]; formSubmissions: MetricPoint[] }
+  atTheMovies: { pageViews: MetricPoint[]; activeUsers: MetricPoint[] }
+  lastUpdated: string
+} | null> {
+  if (!process.env.DATABASE_URL) return null
+  try {
+    const rows = await getHistory()
+    if (rows.length === 0) return null
+
+    const byMetric: Record<string, MetricPoint[]> = {}
+    for (const r of rows) {
+      if (!byMetric[r.metric]) byMetric[r.metric] = []
+      byMetric[r.metric].push({ date: r.date, value: r.value })
+    }
+
+    const lastUpdated = rows[rows.length - 1].date
+    return {
+      atmSocial: {
+        pageViews:       byMetric['atm_social_page_views']      ?? [],
+        activeUsers:     byMetric['atm_social_active_users']    ?? [],
+        formSubmissions: byMetric['form_submissions']           ?? [],
+      },
+      atTheMovies: {
+        pageViews:   byMetric['at_the_movies_page_views']   ?? [],
+        activeUsers: byMetric['at_the_movies_active_users'] ?? [],
+      },
+      lastUpdated,
+    }
+  } catch (err) {
+    console.error('[Neon] history load failed, falling back:', err)
+    return null
+  }
+}
+
 // --- Public API ------------------------------------------------------------
 
-/**
- * Compose the full dashboard dataset. Async-friendly on purpose so the Phase 2
- * Neon read can drop in without changing callers.
- */
 export async function getDashboardData(): Promise<DashboardData> {
   const meta = getMeta()
 
   if (hasGA4Creds()) {
-    const ga4 = await fetchGA4Data()
-    const formSubmissions = await getHubspot()
-    const pageViews = ga4.atmSocial.pageViews.value
-    const submissions = formSubmissions.value
+    const [ga4, formSubmissions, neon] = await Promise.all([
+      fetchGA4Data(),
+      getHubspot(),
+      loadNeonHistory(),
+    ])
+
+    // Use Neon history when available; fall back to live GA4 history + hubspot.json
+    const atmSocial = {
+      pageViews:       buildMetricFromRows(neon?.atmSocial.pageViews       ?? ga4.atmSocial.pageViews.history,       ga4.atmSocial.pageViews.value),
+      activeUsers:     buildMetricFromRows(neon?.atmSocial.activeUsers     ?? ga4.atmSocial.activeUsers.history,     ga4.atmSocial.activeUsers.value),
+      formSubmissions: buildMetricFromRows(neon?.atmSocial.formSubmissions ?? formSubmissions.history,               formSubmissions.value),
+    }
+    const atTheMovies = {
+      pageViews:   buildMetricFromRows(neon?.atTheMovies.pageViews   ?? ga4.atTheMovies.pageViews.history,   ga4.atTheMovies.pageViews.value),
+      activeUsers: buildMetricFromRows(neon?.atTheMovies.activeUsers ?? ga4.atTheMovies.activeUsers.history, ga4.atTheMovies.activeUsers.value),
+    }
+
+    const pageViews = atmSocial.pageViews.value
+    const submissions = atmSocial.formSubmissions.value
     const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
 
     return {
-      atmSocial: { ...ga4.atmSocial, formSubmissions, conversionRate },
-      atTheMovies: ga4.atTheMovies,
+      atmSocial: { ...atmSocial, conversionRate },
+      atTheMovies,
       meta,
-      lastUpdated: ga4.lastUpdated,
+      lastUpdated: neon?.lastUpdated ?? ga4.lastUpdated,
       seeded: false,
     }
   }
