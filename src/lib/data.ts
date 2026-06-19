@@ -200,6 +200,18 @@ function buildMetricFromRows(
   return { value: liveValue, history: rows.map(r => ({ date: r.date, value: r.value })) }
 }
 
+// Merge GA4 daily history (full range) with Neon snapshots (recent only).
+// Neon wins on dates where both have data; GA4 fills the gaps.
+function mergeHistory(ga4: MetricPoint[], neon: MetricPoint[]): MetricPoint[] {
+  const neonMap = new Map(neon.map(p => [p.date, p.value]))
+  const merged = ga4.map(p => ({ date: p.date, value: neonMap.get(p.date) ?? p.value }))
+  const ga4Dates = new Set(ga4.map(p => p.date))
+  for (const p of neon) {
+    if (!ga4Dates.has(p.date)) merged.push(p)
+  }
+  return merged.sort((a, b) => a.date.localeCompare(b.date))
+}
+
 async function loadNeonHistory(): Promise<{
   atmSocial: { pageViews: MetricPoint[]; activeUsers: MetricPoint[]; formSubmissions: MetricPoint[] }
   atTheMovies: { pageViews: MetricPoint[]; activeUsers: MetricPoint[] }
@@ -247,15 +259,16 @@ export async function getDashboardData(): Promise<DashboardData> {
       loadNeonHistory(),
     ])
 
-    // Use Neon history when available; fall back to live GA4 history + hubspot.json
+    // Merge GA4 daily history (full date range) with Neon snapshots (June 19+).
+    // GA4 always provides the complete history; Neon overrides on dates it has synced.
     const atmSocial = {
-      pageViews:       buildMetricFromRows(neon?.atmSocial.pageViews       ?? ga4.atmSocial.pageViews.history,       ga4.atmSocial.pageViews.value),
-      activeUsers:     buildMetricFromRows(neon?.atmSocial.activeUsers     ?? ga4.atmSocial.activeUsers.history,     ga4.atmSocial.activeUsers.value),
-      formSubmissions: buildMetricFromRows(neon?.atmSocial.formSubmissions ?? formSubmissions.history,               formSubmissions.value),
+      pageViews:       buildMetricFromRows(neon ? mergeHistory(ga4.atmSocial.pageViews.history,       neon.atmSocial.pageViews)       : ga4.atmSocial.pageViews.history,       ga4.atmSocial.pageViews.value),
+      activeUsers:     buildMetricFromRows(neon ? mergeHistory(ga4.atmSocial.activeUsers.history,     neon.atmSocial.activeUsers)     : ga4.atmSocial.activeUsers.history,     ga4.atmSocial.activeUsers.value),
+      formSubmissions: buildMetricFromRows(neon ? mergeHistory(formSubmissions.history,               neon.atmSocial.formSubmissions) : formSubmissions.history,               formSubmissions.value),
     }
     const atTheMovies = {
-      pageViews:   buildMetricFromRows(neon?.atTheMovies.pageViews   ?? ga4.atTheMovies.pageViews.history,   ga4.atTheMovies.pageViews.value),
-      activeUsers: buildMetricFromRows(neon?.atTheMovies.activeUsers ?? ga4.atTheMovies.activeUsers.history, ga4.atTheMovies.activeUsers.value),
+      pageViews:   buildMetricFromRows(neon ? mergeHistory(ga4.atTheMovies.pageViews.history,   neon.atTheMovies.pageViews)   : ga4.atTheMovies.pageViews.history,   ga4.atTheMovies.pageViews.value),
+      activeUsers: buildMetricFromRows(neon ? mergeHistory(ga4.atTheMovies.activeUsers.history, neon.atTheMovies.activeUsers) : ga4.atTheMovies.activeUsers.history, ga4.atTheMovies.activeUsers.value),
     }
 
     const pageViews = atmSocial.pageViews.value
