@@ -36,12 +36,27 @@ export type PageMetrics = {
   activeUsers: Metric
 }
 
+/** One ad creative's lifetime stats, from Meta Ads Manager. */
+export type MetaCreative = {
+  id: string
+  name: string
+  status: 'active' | 'off'
+  utmContent: string | null
+  impressions: number | null
+  outboundClicks: number | null
+  landingPageViews: number | null
+  amountSpent: number | null
+  costPerLpv: number | null
+}
+
 /** The Meta (manual) data, read from /data/meta.json. */
 export type MetaData = {
   lastUpdated: string
   landingPageViews: number
+  totalAmountSpent: number | null
   note: string
   history: MetricPoint[]
+  creatives: MetaCreative[]
 }
 
 /** Everything the dashboard renders. */
@@ -141,14 +156,38 @@ function getMeta(): MetaData {
   const raw = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
     last_updated: string
     landing_page_views: number
+    total_amount_spent?: number
     note: string
     history: { date: string; landing_page_views: number }[]
+    creatives?: {
+      id: string
+      name: string
+      status: 'active' | 'off'
+      utm_content: string | null
+      impressions: number | null
+      outbound_clicks: number | null
+      landing_page_views: number | null
+      amount_spent: number | null
+      cost_per_lpv: number | null
+    }[]
   }
   return {
     lastUpdated: raw.last_updated,
     landingPageViews: raw.landing_page_views,
+    totalAmountSpent: raw.total_amount_spent ?? null,
     note: raw.note,
     history: raw.history.map((h) => ({ date: h.date, value: h.landing_page_views })),
+    creatives: (raw.creatives ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      utmContent: c.utm_content,
+      impressions: c.impressions,
+      outboundClicks: c.outbound_clicks,
+      landingPageViews: c.landing_page_views,
+      amountSpent: c.amount_spent,
+      costPerLpv: c.cost_per_lpv,
+    })),
   }
 }
 

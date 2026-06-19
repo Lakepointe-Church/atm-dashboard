@@ -1,6 +1,7 @@
 {
   "last_updated": "2026-06-18",
   "landing_page_views": 2611,
+  "total_amount_spent": 171.83,
   "note": "Manually entered from Meta Ads Manager. Replace with API once app review clears.",
   "history": [
     { "date": "2026-06-11", "landing_page_views": 348 },
@@ -11,5 +12,62 @@
     { "date": "2026-06-16", "landing_page_views": 2095 },
     { "date": "2026-06-17", "landing_page_views": 2489 },
     { "date": "2026-06-18", "landing_page_views": 2611 }
+  ],
+  "creatives": [
+    {
+      "id": "vid2",
+      "name": "VID 2",
+      "status": "active",
+      "utm_content": "vid2",
+      "impressions": 12164,
+      "outbound_clicks": null,
+      "landing_page_views": 181,
+      "amount_spent": 101.73,
+      "cost_per_lpv": 0.56
+    },
+    {
+      "id": "vid1",
+      "name": "VID 1",
+      "status": "active",
+      "utm_content": null,
+      "impressions": 4044,
+      "outbound_clicks": null,
+      "landing_page_views": 74,
+      "amount_spent": 33.06,
+      "cost_per_lpv": 0.45
+    },
+    {
+      "id": "img3",
+      "name": "IMG 3",
+      "status": "active",
+      "utm_content": "img3",
+      "impressions": 1823,
+      "outbound_clicks": null,
+      "landing_page_views": 25,
+      "amount_spent": 11.40,
+      "cost_per_lpv": 0.46
+    },
+    {
+      "id": "img1",
+      "name": "IMG 1",
+      "status": "active",
+      "utm_content": "img1",
+      "impressions": 1350,
+      "outbound_clicks": null,
+      "landing_page_views": 20,
+      "amount_spent": 12.95,
+      "cost_per_lpv": 0.65
+    },
+    {
+      "id": "img2",
+      "name": "IMG 2",
+      "status": "active",
+      "utm_content": "img2",
+      "impressions": 1515,
+      "outbound_clicks": null,
+      "landing_page_views": 15,
+      "amount_spent": 12.69,
+      "cost_per_lpv": 0.85
+    }
   ]
 }

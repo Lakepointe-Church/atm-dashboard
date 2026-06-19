@@ -1,4 +1,4 @@
-import { getDashboardData } from '@/lib/data'
+import { getDashboardData, type MetaCreative } from '@/lib/data'
 import { colors, fonts, shadow } from '@/lib/theme'
 import { StatCard } from '@/components/ui/StatCard'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -10,10 +10,11 @@ export const dynamic = 'force-dynamic'
 const CAMPAIGN_DATES = 'July 11 – August 2'
 
 const FOOTNOTES = [
-  'atm-social is distributed only via Meta ads, so its traffic ≈ ad traffic.',
-  'HubSpot form views run higher than GA4 page views due to differences in how each tool tracks; GA4 is the more reliable traffic figure.',
-  'Meta numbers are entered manually until API access is approved.',
-  'No UTM parameters are on the ads currently, so per-creative breakdown isn’t available in GA4.',
+  "atm-social is distributed only via Meta ads, so its traffic ≈ ad traffic.",
+  "HubSpot form views run higher than GA4 page views due to differences in how each tool tracks; GA4 is the more reliable traffic figure.",
+  "Meta numbers are entered manually until API access is approved. Update data/meta.json and redeploy to refresh creative stats.",
+  "UTM parameters are now in place for all ads (utm_content=vid2/img1/img2/img3). VID 1 predates UTM setup and has no content tag.",
+  "Cost per lead = total Meta ad spend ÷ HubSpot form submissions. Outbound clicks require enabling that column in Meta Ads Manager → Columns.",
 ]
 
 function fmt(n: number) {
@@ -92,6 +93,23 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* ── Meta Ad Creatives ──────────────────────────────── */}
+      {d.meta.creatives.length > 0 && (
+        <section className="fade-up-2" style={{ marginBottom: '48px' }}>
+          <SectionHeader
+            title="Meta Ad Creatives"
+            sub={`lifetime to ${prettyDate(d.meta.lastUpdated)} · manual entry · sorted by landing page views`}
+            accent={colors.amber}
+            marginBottom="16px"
+          />
+          <MetaCreativesTable
+            creatives={d.meta.creatives}
+            totalAmountSpent={d.meta.totalAmountSpent}
+            formSubmissions={d.atmSocial.formSubmissions.value}
+          />
+        </section>
+      )}
+
       {/* ── Trend charts ───────────────────────────────────── */}
       <section className="fade-up-3" style={{ marginBottom: '44px' }}>
         <SectionHeader
@@ -146,6 +164,106 @@ export default async function DashboardPage() {
         </Surface>
       </section>
     </main>
+  )
+}
+
+function MetaCreativesTable({ creatives, totalAmountSpent, formSubmissions }: {
+  creatives: MetaCreative[]
+  totalAmountSpent: number | null
+  formSubmissions: number
+}) {
+  const active = creatives.filter(c => c.status === 'active')
+  const totalImpressions = active.reduce((s, c) => s + (c.impressions ?? 0), 0)
+  const totalLPV = active.reduce((s, c) => s + (c.landingPageViews ?? 0), 0)
+  const costPerLead = totalAmountSpent && formSubmissions > 0
+    ? totalAmountSpent / formSubmissions
+    : null
+
+  const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
+    <th style={{
+      fontFamily: fonts.sans, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.1em',
+      textTransform: 'uppercase', color: colors.label, padding: '10px 14px',
+      textAlign: right ? 'right' : 'left', borderBottom: `1px solid ${colors.border}`,
+      whiteSpace: 'nowrap',
+    }}>{children}</th>
+  )
+
+  const TD = ({ children, right, muted, bold }: { children: React.ReactNode; right?: boolean; muted?: boolean; bold?: boolean }) => (
+    <td style={{
+      fontFamily: fonts.sans, fontSize: '13px', padding: '11px 14px',
+      textAlign: right ? 'right' : 'left',
+      color: muted ? colors.muted : bold ? colors.ink : colors.body,
+      fontWeight: bold ? 600 : 400,
+      fontVariantNumeric: 'tabular-nums',
+    }}>{children}</td>
+  )
+
+  const fmtCurrency = (n: number | null) => n != null ? `$${n.toFixed(2)}` : '—'
+  const fmtNum = (n: number | null) => n != null ? n.toLocaleString('en-US') : '—'
+
+  return (
+    <Surface padding="0">
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: colors.surfaceAlt }}>
+              <TH>Creative</TH>
+              <TH>Impressions</TH>
+              <TH right>Outbound Clicks</TH>
+              <TH right>Landing Page Views</TH>
+              <TH right>Amount Spent</TH>
+              <TH right>Cost / LPV</TH>
+            </tr>
+          </thead>
+          <tbody>
+            {creatives.map((c, i) => (
+              <tr key={c.id} style={{ background: i % 2 === 0 ? colors.surface : colors.surfaceAlt }}>
+                <TD>
+                  <span style={{ fontWeight: 600, color: colors.ink }}>{c.name}</span>
+                  {c.utmContent && (
+                    <span style={{ marginLeft: '8px', fontSize: '11px', color: colors.muted, fontFamily: 'monospace' }}>
+                      utm_content={c.utmContent}
+                    </span>
+                  )}
+                </TD>
+                <TD right>{fmtNum(c.impressions)}</TD>
+                <TD right muted={c.outboundClicks == null}>{fmtNum(c.outboundClicks)}</TD>
+                <TD right>{fmtNum(c.landingPageViews)}</TD>
+                <TD right>{fmtCurrency(c.amountSpent)}</TD>
+                <TD right muted={c.costPerLpv == null}>{fmtCurrency(c.costPerLpv)}</TD>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: `2px solid ${colors.borderStrong}`, background: colors.surfaceAlt }}>
+              <TD bold>Total (active ads)</TD>
+              <TD right bold>{totalImpressions.toLocaleString('en-US')}</TD>
+              <TD right muted>—</TD>
+              <TD right bold>{totalLPV.toLocaleString('en-US')}</TD>
+              <TD right bold>{fmtCurrency(totalAmountSpent)}</TD>
+              <TD right muted>—</TD>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {costPerLead != null && (
+        <div style={{
+          padding: '12px 16px', borderTop: `1px solid ${colors.border}`,
+          fontFamily: fonts.sans, fontSize: '13px', color: colors.body,
+          display: 'flex', gap: '24px', flexWrap: 'wrap',
+        }}>
+          <span>
+            <span style={{ color: colors.label, fontWeight: 600, textTransform: 'uppercase', fontSize: '10.5px', letterSpacing: '0.08em' }}>Cost per Lead </span>
+            <span style={{ fontFamily: fonts.display, fontSize: '20px', fontWeight: 600, color: colors.ink }}>
+              {fmtCurrency(costPerLead)}
+            </span>
+            <span style={{ color: colors.muted, fontSize: '11.5px', marginLeft: '6px' }}>
+              total spend ÷ {formSubmissions.toLocaleString('en-US')} HubSpot submissions
+            </span>
+          </span>
+        </div>
+      )}
+    </Surface>
   )
 }
 
