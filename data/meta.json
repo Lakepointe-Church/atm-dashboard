@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-06-18",
+  "last_updated": "2026-06-19",
   "landing_page_views": 2611,
   "total_amount_spent": 171.83,
   "note": "Manually entered from Meta Ads Manager. Replace with API once app review clears.",
@@ -20,7 +20,7 @@
       "status": "active",
       "utm_content": "vid2",
       "impressions": 12164,
-      "outbound_clicks": null,
+      "outbound_clicks": 237,
       "landing_page_views": 181,
       "amount_spent": 101.73,
       "cost_per_lpv": 0.56
@@ -31,7 +31,7 @@
       "status": "active",
       "utm_content": "vid1",
       "impressions": 4044,
-      "outbound_clicks": null,
+      "outbound_clicks": 101,
       "landing_page_views": 74,
       "amount_spent": 33.06,
       "cost_per_lpv": 0.45
@@ -42,7 +42,7 @@
       "status": "active",
       "utm_content": "img3",
       "impressions": 1823,
-      "outbound_clicks": null,
+      "outbound_clicks": 26,
       "landing_page_views": 25,
       "amount_spent": 11.40,
       "cost_per_lpv": 0.46
@@ -53,7 +53,7 @@
       "status": "active",
       "utm_content": "img1",
       "impressions": 1350,
-      "outbound_clicks": null,
+      "outbound_clicks": 25,
       "landing_page_views": 20,
       "amount_spent": 12.95,
       "cost_per_lpv": 0.65
@@ -64,7 +64,7 @@
       "status": "active",
       "utm_content": "img2",
       "impressions": 1515,
-      "outbound_clicks": null,
+      "outbound_clicks": 18,
       "landing_page_views": 15,
       "amount_spent": 12.69,
       "cost_per_lpv": 0.85
