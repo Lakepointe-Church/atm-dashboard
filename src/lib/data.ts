@@ -18,6 +18,7 @@ import path from 'node:path'
 import { fetchGA4Data } from './ga4'
 import { fetchHubspotSubmissionCount } from './hubspot'
 import { getHistory } from './db'
+import { hasMetaCreds, fetchMetaData } from './meta'
 
 // --- Types -----------------------------------------------------------------
 
@@ -42,6 +43,7 @@ export type MetaCreative = {
   name: string
   status: 'active' | 'off'
   utmContent: string | null
+  permalink: string | null
   impressions: number | null
   outboundClicks: number | null
   landingPageViews: number | null
@@ -59,17 +61,42 @@ export type MetaData = {
   creatives: MetaCreative[]
 }
 
+/** Campaign-wide totals for the summary strip. */
+export type SummaryData = {
+  totalPageViews: number
+  totalFormSubmissions: number
+  totalMetaSpend: number | null
+}
+
+/** GA4 page views + active users for a single UTM-filtered channel. */
+export type ChannelMetrics = { pageViews: Metric; activeUsers: Metric }
+
 /** Everything the dashboard renders. */
 export type DashboardData = {
-  /** Ad landing page — distributed only via Meta ads (atm-social). */
-  atmSocial: PageMetrics & {
+  /** Campaign-wide at-a-glance totals (all channels combined). */
+  summary: SummaryData
+  /** Member-facing page (at-the-movies) — direct/organic member traffic. */
+  churchFacing: PageMetrics
+  /** Ad landing page (atm-social) — Meta Ad channel. */
+  metaAd: PageMetrics & {
     formSubmissions: Metric
     /** submissions ÷ GA4 page views, as a 0–100 percentage. */
     conversionRate: number
+    /** total Meta spend ÷ HubSpot submissions; null until both are available. */
+    costPerLead: number | null
   }
-  /** Member-facing page (at-the-movies). */
-  atTheMovies: PageMetrics
-  /** Manually-entered Meta Ads data. */
+  /** UTM-filtered slices of the at-the-movies page, one per campaign channel. */
+  utmChannels: {
+    podcast: ChannelMetrics
+    movieTheaters: ChannelMetrics
+    metaFollowupEmail: ChannelMetrics
+    eNews: ChannelMetrics
+    kidsNewsletter: ChannelMetrics
+    invite: ChannelMetrics
+    organicSocialLinktree: ChannelMetrics
+    organicSocialGroups: ChannelMetrics
+  }
+  /** Meta Ads data (live API or fallback meta.json). */
   meta: MetaData
   /** Most recent successful automated sync (GA4/HubSpot). */
   lastUpdated: string
@@ -95,25 +122,25 @@ function metric(history: [string, number][]): Metric {
 const SEED = {
   atmSocial: {
     pageViews: metric([
-      ['2026-06-08', 1980], ['2026-06-10', 2410], ['2026-06-12', 2780],
+      ['2026-06-10', 2410], ['2026-06-12', 2780],
       ['2026-06-14', 3050], ['2026-06-16', 3256],
     ]),
     activeUsers: metric([
-      ['2026-06-08', 1410], ['2026-06-10', 1720], ['2026-06-12', 1985],
+      ['2026-06-10', 1720], ['2026-06-12', 1985],
       ['2026-06-14', 2180], ['2026-06-16', 2321],
     ]),
     formSubmissions: metric([
-      ['2026-06-08', 92], ['2026-06-10', 112], ['2026-06-12', 131],
+      ['2026-06-10', 112], ['2026-06-12', 131],
       ['2026-06-14', 147], ['2026-06-16', 159],
     ]),
   },
   atTheMovies: {
     pageViews: metric([
-      ['2026-06-08', 920], ['2026-06-10', 1110], ['2026-06-12', 1290],
+      ['2026-06-10', 1110], ['2026-06-12', 1290],
       ['2026-06-14', 1450], ['2026-06-16', 1575],
     ]),
     activeUsers: metric([
-      ['2026-06-08', 480], ['2026-06-10', 590], ['2026-06-12', 700],
+      ['2026-06-10', 590], ['2026-06-12', 700],
       ['2026-06-14', 790], ['2026-06-16', 853],
     ]),
   },
@@ -149,9 +176,17 @@ async function getHubspot(): Promise<Metric> {
   return { value: raw.form_submissions, history }
 }
 
-// --- Meta (manual config file) ---------------------------------------------
+// --- Meta (live API when creds available, else committed meta.json) ---------
 
-function getMeta(): MetaData {
+async function getMeta(): Promise<MetaData> {
+  if (hasMetaCreds()) {
+    try {
+      return await fetchMetaData()
+    } catch (err) {
+      console.error('[Meta] API fetch failed, falling back to meta.json:', err)
+    }
+  }
+
   const file = path.join(process.cwd(), 'data', 'meta.json')
   const raw = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
     last_updated: string
@@ -182,6 +217,7 @@ function getMeta(): MetaData {
       name: c.name,
       status: c.status,
       utmContent: c.utm_content,
+      permalink: null,
       impressions: c.impressions,
       outboundClicks: c.outbound_clicks,
       landingPageViews: c.landing_page_views,
@@ -212,9 +248,21 @@ function mergeHistory(ga4: MetricPoint[], neon: MetricPoint[]): MetricPoint[] {
   return merged.sort((a, b) => a.date.localeCompare(b.date))
 }
 
+type NeonChannelPoints = { pageViews: MetricPoint[]; activeUsers: MetricPoint[] }
+
 async function loadNeonHistory(): Promise<{
   atmSocial: { pageViews: MetricPoint[]; activeUsers: MetricPoint[]; formSubmissions: MetricPoint[] }
   atTheMovies: { pageViews: MetricPoint[]; activeUsers: MetricPoint[] }
+  channels: {
+    podcast: NeonChannelPoints
+    movieTheaters: NeonChannelPoints
+    metaFollowupEmail: NeonChannelPoints
+    eNews: NeonChannelPoints
+    kidsNewsletter: NeonChannelPoints
+    invite: NeonChannelPoints
+    organicSocialLinktree: NeonChannelPoints
+    organicSocialGroups: NeonChannelPoints
+  }
   lastUpdated: string
 } | null> {
   if (!process.env.DATABASE_URL) return null
@@ -228,6 +276,11 @@ async function loadNeonHistory(): Promise<{
       byMetric[r.metric].push({ date: r.date, value: r.value })
     }
 
+    const ch = (pvKey: string, auKey: string): NeonChannelPoints => ({
+      pageViews:   byMetric[pvKey] ?? [],
+      activeUsers: byMetric[auKey] ?? [],
+    })
+
     const lastUpdated = rows[rows.length - 1].date
     return {
       atmSocial: {
@@ -239,6 +292,16 @@ async function loadNeonHistory(): Promise<{
         pageViews:   byMetric['at_the_movies_page_views']   ?? [],
         activeUsers: byMetric['at_the_movies_active_users'] ?? [],
       },
+      channels: {
+        podcast:               ch('podcast_page_views',                 'podcast_active_users'),
+        movieTheaters:         ch('movie_theaters_page_views',          'movie_theaters_active_users'),
+        metaFollowupEmail:     ch('meta_followup_email_page_views',     'meta_followup_email_active_users'),
+        eNews:                 ch('e_news_page_views',                  'e_news_active_users'),
+        kidsNewsletter:        ch('kids_newsletter_page_views',         'kids_newsletter_active_users'),
+        invite:                ch('invite_page_views',                  'invite_active_users'),
+        organicSocialLinktree: ch('organic_social_linktree_page_views', 'organic_social_linktree_active_users'),
+        organicSocialGroups:   ch('organic_social_groups_page_views',   'organic_social_groups_active_users'),
+      },
       lastUpdated,
     }
   } catch (err) {
@@ -247,10 +310,36 @@ async function loadNeonHistory(): Promise<{
   }
 }
 
+function buildChannel(
+  ga4: ChannelMetrics,
+  neon: NeonChannelPoints | null
+): ChannelMetrics {
+  return {
+    pageViews:   buildMetricFromRows(neon ? mergeHistory(ga4.pageViews.history,   neon.pageViews)   : ga4.pageViews.history,   ga4.pageViews.value),
+    activeUsers: buildMetricFromRows(neon ? mergeHistory(ga4.activeUsers.history, neon.activeUsers) : ga4.activeUsers.history, ga4.activeUsers.value),
+  }
+}
+
+function buildUtmChannels(
+  g: { podcast: ChannelMetrics; movieTheaters: ChannelMetrics; metaFollowupEmail: ChannelMetrics; eNews: ChannelMetrics; kidsNewsletter: ChannelMetrics; invite: ChannelMetrics; organicSocialLinktree: ChannelMetrics; organicSocialGroups: ChannelMetrics },
+  n: { podcast: NeonChannelPoints; movieTheaters: NeonChannelPoints; metaFollowupEmail: NeonChannelPoints; eNews: NeonChannelPoints; kidsNewsletter: NeonChannelPoints; invite: NeonChannelPoints; organicSocialLinktree: NeonChannelPoints; organicSocialGroups: NeonChannelPoints } | null
+) {
+  return {
+    podcast:               buildChannel(g.podcast,               n?.podcast               ?? null),
+    movieTheaters:         buildChannel(g.movieTheaters,         n?.movieTheaters         ?? null),
+    metaFollowupEmail:     buildChannel(g.metaFollowupEmail,     n?.metaFollowupEmail     ?? null),
+    eNews:                 buildChannel(g.eNews,                 n?.eNews                 ?? null),
+    kidsNewsletter:        buildChannel(g.kidsNewsletter,        n?.kidsNewsletter        ?? null),
+    invite:                buildChannel(g.invite,                n?.invite                ?? null),
+    organicSocialLinktree: buildChannel(g.organicSocialLinktree, n?.organicSocialLinktree ?? null),
+    organicSocialGroups:   buildChannel(g.organicSocialGroups,   n?.organicSocialGroups   ?? null),
+  }
+}
+
 // --- Public API ------------------------------------------------------------
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const meta = getMeta()
+  const meta = await getMeta()
 
   if (hasGA4Creds()) {
     const [ga4, formSubmissions, neon] = await Promise.all([
@@ -274,10 +363,18 @@ export async function getDashboardData(): Promise<DashboardData> {
     const pageViews = atmSocial.pageViews.value
     const submissions = atmSocial.formSubmissions.value
     const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
+    const costPerLead = meta.totalAmountSpent != null && submissions > 0
+      ? meta.totalAmountSpent / submissions : null
 
     return {
-      atmSocial: { ...atmSocial, conversionRate },
-      atTheMovies,
+      summary: {
+        totalPageViews: atmSocial.pageViews.value + atTheMovies.pageViews.value,
+        totalFormSubmissions: submissions,
+        totalMetaSpend: meta.totalAmountSpent,
+      },
+      churchFacing: atTheMovies,
+      metaAd: { ...atmSocial, conversionRate, costPerLead },
+      utmChannels: buildUtmChannels(ga4.channels, neon?.channels ?? null),
       meta,
       lastUpdated: neon?.lastUpdated ?? ga4.lastUpdated,
       seeded: false,
@@ -289,10 +386,30 @@ export async function getDashboardData(): Promise<DashboardData> {
   const pageViews = data.atmSocial.pageViews.value
   const submissions = formSubmissions.value
   const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
+  const costPerLead = meta.totalAmountSpent != null && submissions > 0
+    ? meta.totalAmountSpent / submissions : null
+
+  const emptyMetric = (): Metric => ({ value: 0, history: [] })
+  const emptyChannel = (): ChannelMetrics => ({ pageViews: emptyMetric(), activeUsers: emptyMetric() })
 
   return {
-    atmSocial: { ...data.atmSocial, formSubmissions, conversionRate },
-    atTheMovies: data.atTheMovies,
+    summary: {
+      totalPageViews: data.atmSocial.pageViews.value + data.atTheMovies.pageViews.value,
+      totalFormSubmissions: submissions,
+      totalMetaSpend: meta.totalAmountSpent,
+    },
+    churchFacing: data.atTheMovies,
+    metaAd: { ...data.atmSocial, formSubmissions, conversionRate, costPerLead },
+    utmChannels: {
+      podcast: emptyChannel(),
+      movieTheaters: emptyChannel(),
+      metaFollowupEmail: emptyChannel(),
+      eNews: emptyChannel(),
+      kidsNewsletter: emptyChannel(),
+      invite: emptyChannel(),
+      organicSocialLinktree: emptyChannel(),
+      organicSocialGroups: emptyChannel(),
+    },
     meta,
     lastUpdated,
     seeded,

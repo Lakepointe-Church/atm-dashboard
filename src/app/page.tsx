@@ -349,10 +349,13 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
             {creatives.map((c, i) => (
               <tr key={c.id} style={{ background: i % 2 === 0 ? colors.surface : colors.surfaceAlt }}>
                 <TD>
-                  <a href={`https://www.facebook.com/ads/library/?id=${c.id}`} target="_blank" rel="noreferrer"
-                    style={{ fontWeight: 600, color: colors.ink, textDecoration: 'underline', textDecorationColor: colors.border }}>
-                    {c.name}
-                  </a>
+                  {c.permalink
+                    ? <a href={c.permalink} target="_blank" rel="noreferrer"
+                        style={{ fontWeight: 600, color: colors.ink, textDecoration: 'underline', textDecorationColor: colors.border }}>
+                        {c.name}
+                      </a>
+                    : <span style={{ fontWeight: 600, color: colors.ink }}>{c.name}</span>
+                  }
                   {c.utmContent && (
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: colors.muted, fontFamily: 'monospace' }}>
                       utm_content={c.utmContent}
