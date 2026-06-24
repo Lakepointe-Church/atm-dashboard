@@ -13,6 +13,9 @@ Full product spec: [`ATM_Dashboard_Spec.md`](ATM_Dashboard_Spec.md).
 - **Phase 2 — DONE & shipped.** Live GA4 + HubSpot pulls, Neon Postgres history store,
   `/api/sync` route, and twice-daily Vercel cron. All three data sources are live as of
   June 19, 2026. See [data sources](#data-sources) below for per-source details.
+- **Meta API — DONE & shipped (June 22, 2026).** Live Meta Marketing API integration
+  replacing manual `data/meta.json` updates. Filtered to "ATM 2026" campaign only.
+  All three data sources are now fully automatic — no manual updates required.
 
 ## Live
 
@@ -27,14 +30,14 @@ Full product spec: [`ATM_Dashboard_Spec.md`](ATM_Dashboard_Spec.md).
 |--------|--------|-------------|
 | **GA4** | Live | `src/lib/ga4.ts` — service account auth via `GA4_SERVICE_ACCOUNT_KEY` + `GA4_PROPERTY_ID`. Two queries per load: daily breakdown (history) + totals. Filters `CONTAINS atm-social` and `CONTAINS at-the-movies`. Note: a malformed GA4 path `/at-the-https:/...` also matches — fixed by summing instead of overwriting. |
 | **HubSpot form submissions** | Live | `src/lib/hubspot.ts` — Service Key bearer token via `HUBSPOT_PRIVATE_APP_TOKEN`. Paginates `form-integrations/v1/submissions/forms/{formId}` (50/page) to count total; no `total` field in response. Form ID: `d2248827-6c54-4792-bf25-697ed9292e15`, Portal: `43908455`. |
-| **Meta landing page views** | Manual | `data/meta.json` — hand-edit `landing_page_views`, `last_updated`, append to `history`, commit, redeploy. |
+| **Meta landing page views** | Live | `src/lib/meta.ts` — System User token via `META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`. Calls `act_{id}/insights` with `filtering` scoped to campaign name `CONTAIN "ATM 2026"`. Fetches daily breakdown + per-ad creative stats. Returns full lifetime history on every request (no Neon needed). Falls back to `data/meta.json` if API fails. |
 | **Neon history** | Live | `src/lib/db.ts` + `DATABASE_URL` (set via Vercel Storage → `neon-atm`). `/api/sync` upserts one row per metric per day. Dashboard uses Neon history arrays when populated; falls back to GA4 direct history + `data/hubspot.json` when empty. |
 
 **Cron:** `vercel.json` runs `/api/sync` at `0 11 * * *` and `0 23 * * *` UTC (6am/6pm Central).
 **First sync:** June 19, 2026 — 4,941 atm-social views / 356 form submissions.
 
-**To update Meta numbers manually:** edit `data/meta.json`, commit, `vercel --prod --yes`.
-**To update HubSpot history manually:** edit `data/hubspot.json`, commit, `vercel --prod --yes`.
+**Meta numbers are now automatic** — no manual updates needed. `data/meta.json` remains as a fallback only.
+**To update HubSpot history manually:** edit `data/hubspot.json`, commit, `vercel --prod --yes` (only needed if the HubSpot API goes down).
 
 ## Stack
 
@@ -85,7 +88,7 @@ renders. `getDashboardData()` is `async` and returns a typed `DashboardData`.
 
 - **GA4** — `src/lib/ga4.ts` fetches live page views + active users for both page paths.
 - **HubSpot** — `src/lib/hubspot.ts` fetches live form submission count; history from Neon.
-- **Meta** — [`data/meta.json`](data/meta.json) (hand-edited, committed).
+- **Meta** — `src/lib/meta.ts` fetches live from Meta Marketing API. Falls back to [`data/meta.json`](data/meta.json) if creds missing or API errors.
 - **History** — [`src/lib/db.ts`](src/lib/db.ts) reads from Neon (`metric_history` table).
   Falls back to GA4 direct history + `data/hubspot.json` when Neon is empty.
 - Form conversion rate = submissions ÷ GA4 page views (computed in `getDashboardData`).
@@ -94,8 +97,6 @@ renders. `getDashboardData()` is `async` and returns a typed `DashboardData`.
 
 - **HubSpot form views** — not yet tracked. `form-integrations/v1/submissions` only gives
   submission count. Form views may need the Analytics API — needs investigation.
-- **Meta API** — replace manual `data/meta.json` with Meta Marketing API once app review
-  clears. Drop-in replacement in `getDashboardData()`.
 - **HubSpot daily history** — Neon accumulates daily snapshots going forward from June 19.
   Pre-June-19 history lives in `data/hubspot.json` (manually entered from CSV).
 
@@ -109,6 +110,8 @@ All set in Vercel (never committed). `.env*` is gitignored.
 | `GA4_SERVICE_ACCOUNT_KEY` | Full service account JSON (single line). Project: `lakepointe-social-dashboard`. SA email: `atm-dashboard@lakepointe-social-dashboard.iam.gserviceaccount.com` |
 | `HUBSPOT_PRIVATE_APP_TOKEN` | HubSpot Service Key (`pat-na1-...`). Created via Legacy Apps → Private in portal `43908455`. Scopes: `crm.objects.contacts.read`, `forms`. |
 | `DATABASE_URL` | Neon connection string. Set automatically via Vercel Storage → `neon-atm`. Sensitive — not available via `vercel env pull`. |
+| `META_ACCESS_TOKEN` | System User token from Business Manager → LP Campaign Reader system user. Sensitive — Production + Preview only. |
+| `META_AD_ACCOUNT_ID` | Numeric ad account ID (without `act_` prefix). Production + Preview only. |
 
 > **Local dev note:** `DATABASE_URL` is a Sensitive var and won't come through `vercel env pull`.
 > The dashboard falls back gracefully to live GA4/HubSpot + seed history when it's absent.

@@ -54,16 +54,17 @@ async function queryInsights(extraParams: Record<string, string>): Promise<RawRo
 async function fetchPermalinks(adIds: string[]): Promise<Record<string, string>> {
   if (!adIds.length) return {}
   const token = process.env.META_ACCESS_TOKEN!
-  // template_url is present on dynamic/catalog ads — those have no real post permalink
-  const url = `${GRAPH_BASE}/?ids=${adIds.join(',')}&fields=creative{effective_object_story_id,template_url}&access_token=${token}`
+  // Only VIDEO object_type has a real post permalink. SHARE type uses an
+  // Advantage+ placement template dark post that renders {{product.brand}} placeholders.
+  const url = `${GRAPH_BASE}/?ids=${adIds.join(',')}&fields=creative{effective_object_story_id,object_type}&access_token=${token}`
   try {
     const res = await fetch(url)
     const json = await res.json() as Record<string, {
-      creative?: { effective_object_story_id?: string; template_url?: string }
+      creative?: { effective_object_story_id?: string; object_type?: string }
     }>
     const out: Record<string, string> = {}
     for (const [adId, data] of Object.entries(json)) {
-      if (data.creative?.template_url) continue  // dynamic ad, no real permalink
+      if (data.creative?.object_type !== 'VIDEO') continue
       const storyId = data.creative?.effective_object_story_id
       if (storyId) {
         const idx = storyId.indexOf('_')
