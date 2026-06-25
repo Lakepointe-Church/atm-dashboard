@@ -1,58 +1,48 @@
-// Design tokens — single source of truth for the ATM dashboard look & feel.
-// Deliberately distinct from the CIP (community-demographic-tool) dark theme:
-// this is a LIGHT, editorial dashboard — warm paper background, white cards with
-// soft shadows, a serif display face, and a cinematic accent palette.
-// Pure constants (no React/DOM imports) so they're usable anywhere.
+// Design tokens — Lakepointe brand-light.
+// Single source of truth for surfaces, the LP palette, text hierarchy, and shadows.
+// Pure constants — no React/DOM imports.
 
 export const colors = {
-  // Surfaces (light)
-  bg:          '#F4F1EA', // warm paper
-  bgAlt:       '#EEEAE0',
+  // Surfaces (brand-light: LP Taupe base, white cards)
+  bg:          '#DED7CC', // LP Taupe — page background
+  bgAlt:       '#D0C9BE',
   surface:     '#FFFFFF',
-  surfaceAlt:  '#FBFAF6',
-  border:      '#E7E1D5',
-  borderStrong:'#D8D1C1',
+  surfaceAlt:  '#F8F6F3',
+  border:      'rgba(50,50,50,0.13)',
+  borderStrong:'rgba(50,50,50,0.22)',
 
-  // Accent palette — cinematic
-  red:    '#CB4231', // primary (curtain red)
-  navy:   '#2B3A67',
-  teal:   '#0E8C7F',
-  amber:  '#D9952B',
-  violet: '#6C56C9',
+  // Lakepointe brand palette
+  orange: '#F04B28', // LP Orange — primary pop (use sparingly)
+  slate:  '#7AA3AA', // LP Slate — secondary complement
+  lpGray: '#323232', // LP Dark Gray — structure / tertiary accent
 
-  // Ink / text (dark on light)
-  ink:    '#1C1A16', // strongest — headings, big numbers
-  body:   '#45413A', // body copy
-  label:  '#6E6759', // labels / captions
-  muted:  '#8B8475', // secondary captions (passes AA on paper)
-  faint:  '#A69E8D', // separators / faintest text
+  // Text hierarchy (dark on light)
+  ink:    '#323232',
+  body:   '#4a4a4a',
+  label:  '#666666',
+  muted:  '#888888',
+  faint:  '#AAAAAA',
 } as const
 
 export const fonts = {
-  display: "'Fraunces', Georgia, 'Times New Roman', serif", // headings + big numbers
-  sans:    "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", // body + labels
+  display: '"Gotham","Futura","Avenir","Century Gothic","Helvetica Neue",Helvetica,Calibri,system-ui,sans-serif',
+  sans:    '"Gotham","Futura","Avenir","Century Gothic","Helvetica Neue",Helvetica,Calibri,system-ui,sans-serif',
 } as const
 
-// Soft elevation shadows for the light surfaces.
 export const shadow = {
-  sm:  '0 1px 2px rgba(28,26,22,0.05), 0 1px 3px rgba(28,26,22,0.04)',
-  md:  '0 2px 4px rgba(28,26,22,0.04), 0 8px 20px rgba(28,26,22,0.05)',
-  lg:  '0 6px 16px rgba(28,26,22,0.08), 0 16px 40px rgba(28,26,22,0.08)',
+  sm:  '0 1px 2px rgba(50,50,50,0.06), 0 1px 3px rgba(50,50,50,0.05)',
+  md:  '0 2px 4px rgba(50,50,50,0.06), 0 8px 20px rgba(50,50,50,0.07)',
+  lg:  '0 6px 16px rgba(50,50,50,0.10), 0 16px 40px rgba(50,50,50,0.10)',
 } as const
 
-// Flat surface background for panels/cards.
 export const CARD_BG = colors.surface
 
-// Comma-separated RGB strings for rgba() composition (accent tints).
 export const rgbMap: Record<string, string> = {
-  [colors.red]:    '203,66,49',
-  [colors.navy]:   '43,58,103',
-  [colors.teal]:   '14,140,127',
-  [colors.amber]:  '217,149,43',
-  [colors.violet]: '108,86,201',
+  [colors.orange]: '240,75,40',
+  [colors.slate]:  '122,163,170',
+  [colors.lpGray]: '50,50,50',
 }
 
-// Returns the comma-separated RGB for a hex from the palette (defaults to red).
 export function toRgb(hex: string): string {
-  return rgbMap[hex] ?? rgbMap[colors.red]
+  return rgbMap[hex] ?? rgbMap[colors.orange]
 }

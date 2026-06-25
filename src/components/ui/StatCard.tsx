@@ -45,7 +45,7 @@ export function StatCard({ label, value, sub, color, loading, compact }: {
       <div style={{ fontFamily: fonts.sans, fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', color: colors.label, textTransform: 'uppercase', marginBottom: d.labelMb }}>{label}</div>
       {loading
         ? <div style={{ height: d.skel, width: '60%', background: colors.bgAlt, borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
-        : <div style={{ fontFamily: fonts.display, fontSize: d.value, fontWeight: 600, letterSpacing: '-0.01em', color: colors.ink, lineHeight: 1 }}>{value}</div>
+        : <div style={{ fontFamily: fonts.display, fontSize: d.value, fontWeight: 700, letterSpacing: '0em', color: colors.ink, lineHeight: 1 }}>{value}</div>
       }
       {sub && <div style={{ fontFamily: fonts.sans, fontSize: d.sub, color: colors.muted, marginTop: d.subMt, letterSpacing: '0.01em' }}>{sub}</div>}
     </div>

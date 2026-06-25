@@ -45,12 +45,12 @@ export default async function DashboardPage() {
       <header className="fade-up" style={{ marginBottom: '44px' }}>
         <div style={{
           fontFamily: fonts.sans, fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em',
-          color: colors.red, textTransform: 'uppercase', marginBottom: '14px',
+          color: colors.orange, textTransform: 'uppercase', marginBottom: '14px',
         }}>
           Lakepointe Church · Campaign Analytics
         </div>
         <h1 style={{
-          fontFamily: fonts.display, fontWeight: 600, fontSize: '54px', letterSpacing: '-0.02em',
+          fontFamily: fonts.display, fontWeight: 700, fontSize: '54px', letterSpacing: '-0.015em',
           color: colors.ink, lineHeight: 1.04, marginBottom: '14px', maxWidth: '16ch',
         }}>
           At the Movies
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
           {d.seeded && (
             <>
               <span style={{ color: colors.faint }}>·</span>
-              <span style={{ color: colors.red, fontWeight: 600 }}>Seeded preview — syncs not yet live</span>
+              <span style={{ color: colors.orange, fontWeight: 600 }}>Seeded preview — syncs not yet live</span>
             </>
           )}
         </div>
@@ -80,11 +80,11 @@ export default async function DashboardPage() {
       <section className="fade-up-2" style={{ marginBottom: '52px' }}>
         <SectionHeader title="Campaign Summary" sub="All channels · at-a-glance totals" marginBottom="16px" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
-          <StatCard label="Total Page Views" value={fmt(d.summary.totalPageViews)} sub="all channels" color={colors.red} compact />
-          <StatCard label="Form Submissions" value={fmt(d.summary.totalFormSubmissions)} sub="HubSpot" color={colors.teal} compact />
+          <StatCard label="Total Page Views" value={fmt(d.summary.totalPageViews)} sub="all channels" color={colors.orange} compact />
+          <StatCard label="Form Submissions" value={fmt(d.summary.totalFormSubmissions)} sub="HubSpot" color={colors.slate} compact />
           <PlaceholderCard label="Total Texts" note="Awaiting Rock API" compact />
           {d.summary.totalMetaSpend != null
-            ? <StatCard label="Meta Spend" value={`$${fmt(Math.round(d.summary.totalMetaSpend))}`} sub="Meta API" color={colors.amber} compact />
+            ? <StatCard label="Meta Spend" value={`$${fmt(Math.round(d.summary.totalMetaSpend))}`} sub="Meta API" color={colors.lpGray} compact />
             : <PlaceholderCard label="Meta Spend" note="Awaiting Meta data" compact />
           }
         </div>
@@ -95,19 +95,19 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Church Facing"
           sub="at-the-movies · direct/organic member traffic (no campaign UTM)"
-          accent={colors.navy}
+          accent={colors.slate}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px', marginBottom: '16px' }}>
-          <StatCard label="GA4 Page Views" value={fmt(d.churchFacing.pageViews.value)} color={colors.navy} />
-          <StatCard label="GA4 Active Users" value={fmt(d.churchFacing.activeUsers.value)} color={colors.navy} />
+          <StatCard label="GA4 Page Views" value={fmt(d.churchFacing.pageViews.value)} color={colors.slate} />
+          <StatCard label="GA4 Active Users" value={fmt(d.churchFacing.activeUsers.value)} color={colors.slate} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
-          <ChartPanel title="Page Views" accent={colors.navy}>
-            <TrendChart series={[{ key: 'pageViews', label: 'page views', color: colors.navy, data: d.churchFacing.pageViews.history }]} />
+          <ChartPanel title="Page Views" accent={colors.slate}>
+            <TrendChart series={[{ key: 'pageViews', label: 'page views', color: colors.slate, data: d.churchFacing.pageViews.history }]} />
           </ChartPanel>
-          <ChartPanel title="Active Users" accent={colors.navy}>
-            <TrendChart series={[{ key: 'activeUsers', label: 'active users', color: colors.navy, data: d.churchFacing.activeUsers.history }]} />
+          <ChartPanel title="Active Users" accent={colors.slate}>
+            <TrendChart series={[{ key: 'activeUsers', label: 'active users', color: colors.slate, data: d.churchFacing.activeUsers.history }]} />
           </ChartPanel>
         </div>
       </section>
@@ -117,20 +117,20 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Meta Ads"
           sub="atm-social · all traffic"
-          accent={colors.red}
+          accent={colors.orange}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
-          <StatCard label="GA4 Page Views" value={fmt(d.metaAd.pageViews.value)} color={colors.red} />
-          <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.navy} />
-          <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.teal} />
-          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.violet} />
-          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API" color={colors.amber} />
+          <StatCard label="GA4 Page Views" value={fmt(d.metaAd.pageViews.value)} color={colors.orange} />
+          <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
+          <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
+          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.orange} />
+          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API" color={colors.lpGray} />
           {d.metaAd.costPerLead != null && (
-            <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.amber} />
+            <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.lpGray} />
           )}
-          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.red} />
-          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.red} />
+          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.orange} />
+          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.orange} />
         </div>
 
         {d.meta.creatives.length > 0 && (
@@ -140,17 +140,17 @@ export default async function DashboardPage() {
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
-          <ChartPanel title="Page Views" accent={colors.red}>
-            <TrendChart series={[{ key: 'pageViews', label: 'page views', color: colors.red, data: d.metaAd.pageViews.history }]} />
+          <ChartPanel title="Page Views" accent={colors.orange}>
+            <TrendChart series={[{ key: 'pageViews', label: 'page views', color: colors.orange, data: d.metaAd.pageViews.history }]} />
           </ChartPanel>
-          <ChartPanel title="Active Users" accent={colors.navy}>
-            <TrendChart series={[{ key: 'activeUsers', label: 'active users', color: colors.navy, data: d.metaAd.activeUsers.history }]} />
+          <ChartPanel title="Active Users" accent={colors.slate}>
+            <TrendChart series={[{ key: 'activeUsers', label: 'active users', color: colors.slate, data: d.metaAd.activeUsers.history }]} />
           </ChartPanel>
-          <ChartPanel title="Form Submissions" accent={colors.teal}>
-            <TrendChart series={[{ key: 'submissions', label: 'submissions', color: colors.teal, data: d.metaAd.formSubmissions.history }]} />
+          <ChartPanel title="Form Submissions" accent={colors.slate}>
+            <TrendChart series={[{ key: 'submissions', label: 'submissions', color: colors.slate, data: d.metaAd.formSubmissions.history }]} />
           </ChartPanel>
-          <ChartPanel title="Meta Landing Page Views" accent={colors.amber}>
-            <TrendChart series={[{ key: 'meta', label: 'landing views', color: colors.amber, data: d.meta.history }]} />
+          <ChartPanel title="Meta Landing Page Views" accent={colors.lpGray}>
+            <TrendChart series={[{ key: 'meta', label: 'landing views', color: colors.lpGray, data: d.meta.history }]} />
           </ChartPanel>
         </div>
         {d.seeded && (
@@ -165,13 +165,13 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Podcast"
           sub="at-the-movies · utm_medium=podcast · utm_source=youtube · utm_content=atm"
-          accent={colors.teal}
+          accent={colors.slate}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
           <PlaceholderCard label="Texts Sent — ATM keyword" note="Awaiting Rock API access" />
-          <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.podcast.pageViews.value)} color={colors.teal} />
-          <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.podcast.activeUsers.value)} color={colors.teal} />
+          <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.podcast.pageViews.value)} color={colors.slate} />
+          <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.podcast.activeUsers.value)} color={colors.slate} />
         </div>
       </section>
 
@@ -180,13 +180,13 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Movie Theaters"
           sub="at-the-movies · utm_medium=theaters · utm_source=video · utm_content=movies"
-          accent={colors.amber}
+          accent={colors.lpGray}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
           <PlaceholderCard label="Texts Sent — MOVIES keyword" note="Awaiting Rock API access" />
-          <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.movieTheaters.pageViews.value)} color={colors.amber} />
-          <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.movieTheaters.activeUsers.value)} color={colors.amber} />
+          <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.movieTheaters.pageViews.value)} color={colors.lpGray} />
+          <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.movieTheaters.activeUsers.value)} color={colors.lpGray} />
         </div>
       </section>
 
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Email"
           sub="at-the-movies · utm_source=email · split by utm_medium"
-          accent={colors.violet}
+          accent={colors.orange}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '16px', alignItems: 'stretch' }}>
@@ -203,7 +203,7 @@ export default async function DashboardPage() {
           <div style={{ gridColumn: '3', gridRow: '1 / 4', display: 'flex', flexDirection: 'column' }}>
             <Surface padding="20px 22px 14px" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '16px' }}>
-                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: colors.violet }} />
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: colors.orange }} />
                 <div style={{ fontFamily: fonts.sans, fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', color: colors.body, textTransform: 'uppercase' }}>
                   Email Channels — Page Views
                 </div>
@@ -212,23 +212,23 @@ export default async function DashboardPage() {
                 <TrendChart
                   height={280}
                   series={[
-                    { key: 'eNews',          label: 'E News',          color: colors.violet, data: d.utmChannels.eNews.pageViews.history },
-                    { key: 'kidsNewsletter', label: 'Kids Newsletter', color: colors.teal,   data: d.utmChannels.kidsNewsletter.pageViews.history },
-                    { key: 'invite',         label: 'Invite',          color: colors.amber,  data: d.utmChannels.invite.pageViews.history },
+                    { key: 'eNews',          label: 'E News',          color: colors.orange, data: d.utmChannels.eNews.pageViews.history },
+                    { key: 'kidsNewsletter', label: 'Kids Newsletter', color: colors.slate,   data: d.utmChannels.kidsNewsletter.pageViews.history },
+                    { key: 'invite',         label: 'Invite',          color: colors.lpGray,  data: d.utmChannels.invite.pageViews.history },
                   ]}
                 />
               </div>
             </Surface>
           </div>
           {/* Row 1: E News */}
-          <StatCard label="E News Page Views"   value={fmt(d.utmChannels.eNews.pageViews.value)}   sub="utm_medium=e_news" color={colors.violet} />
-          <StatCard label="E News Active Users" value={fmt(d.utmChannels.eNews.activeUsers.value)} sub="utm_medium=e_news" color={colors.violet} />
+          <StatCard label="E News Page Views"   value={fmt(d.utmChannels.eNews.pageViews.value)}   sub="utm_medium=e_news" color={colors.orange} />
+          <StatCard label="E News Active Users" value={fmt(d.utmChannels.eNews.activeUsers.value)} sub="utm_medium=e_news" color={colors.orange} />
           {/* Row 2: Kids Newsletter */}
-          <StatCard label="Kids Newsletter Page Views"   value={fmt(d.utmChannels.kidsNewsletter.pageViews.value)}   sub="utm_medium=kids_newsletter" color={colors.teal} />
-          <StatCard label="Kids Newsletter Active Users" value={fmt(d.utmChannels.kidsNewsletter.activeUsers.value)} sub="utm_medium=kids_newsletter" color={colors.teal} />
+          <StatCard label="Kids Newsletter Page Views"   value={fmt(d.utmChannels.kidsNewsletter.pageViews.value)}   sub="utm_medium=kids_newsletter" color={colors.slate} />
+          <StatCard label="Kids Newsletter Active Users" value={fmt(d.utmChannels.kidsNewsletter.activeUsers.value)} sub="utm_medium=kids_newsletter" color={colors.slate} />
           {/* Row 3: Invite */}
-          <StatCard label="Invite Page Views"   value={fmt(d.utmChannels.invite.pageViews.value)}   sub="utm_medium=stand_alone_1" color={colors.amber} />
-          <StatCard label="Invite Active Users" value={fmt(d.utmChannels.invite.activeUsers.value)} sub="utm_medium=stand_alone_1" color={colors.amber} />
+          <StatCard label="Invite Page Views"   value={fmt(d.utmChannels.invite.pageViews.value)}   sub="utm_medium=stand_alone_1" color={colors.lpGray} />
+          <StatCard label="Invite Active Users" value={fmt(d.utmChannels.invite.activeUsers.value)} sub="utm_medium=stand_alone_1" color={colors.lpGray} />
         </div>
       </section>
 
@@ -237,20 +237,20 @@ export default async function DashboardPage() {
         <SectionHeader
           title="Organic Social"
           sub="at-the-movies · utm_medium=organic_social · split by utm_source"
-          accent={colors.teal}
+          accent={colors.slate}
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
-          <StatCard label="Linktree Page Views" value={fmt(d.utmChannels.organicSocialLinktree.pageViews.value)} sub="utm_source=social" color={colors.teal} />
-          <StatCard label="Linktree Active Users" value={fmt(d.utmChannels.organicSocialLinktree.activeUsers.value)} sub="utm_source=social" color={colors.teal} />
-          <StatCard label="Groups Page Views" value={fmt(d.utmChannels.organicSocialGroups.pageViews.value)} sub="utm_source=groups" color={colors.navy} />
-          <StatCard label="Groups Active Users" value={fmt(d.utmChannels.organicSocialGroups.activeUsers.value)} sub="utm_source=groups" color={colors.navy} />
+          <StatCard label="Linktree Page Views" value={fmt(d.utmChannels.organicSocialLinktree.pageViews.value)} sub="utm_source=social" color={colors.slate} />
+          <StatCard label="Linktree Active Users" value={fmt(d.utmChannels.organicSocialLinktree.activeUsers.value)} sub="utm_source=social" color={colors.slate} />
+          <StatCard label="Groups Page Views" value={fmt(d.utmChannels.organicSocialGroups.pageViews.value)} sub="utm_source=groups" color={colors.slate} />
+          <StatCard label="Groups Active Users" value={fmt(d.utmChannels.organicSocialGroups.activeUsers.value)} sub="utm_source=groups" color={colors.slate} />
         </div>
       </section>
 
       {/* ── Footnotes ──────────────────────────────────────── */}
       <section className="fade-up-4">
-        <SectionHeader title="How to read these numbers" accent={colors.amber} marginBottom="14px" />
+        <SectionHeader title="How to read these numbers" accent={colors.lpGray} marginBottom="14px" />
         <Surface padding="22px 26px">
           <ul style={{ listStyle: 'none', display: 'grid', gap: '12px' }}>
             {FOOTNOTES.map((note, i) => (
@@ -258,7 +258,7 @@ export default async function DashboardPage() {
                 fontFamily: fonts.sans, fontSize: '13.5px', color: colors.body,
                 lineHeight: 1.55, paddingLeft: '20px', position: 'relative',
               }}>
-                <span style={{ position: 'absolute', left: 0, top: '1px', color: colors.red, fontWeight: 700 }}>•</span>
+                <span style={{ position: 'absolute', left: 0, top: '1px', color: colors.orange, fontWeight: 700 }}>•</span>
                 {note}
               </li>
             ))}
