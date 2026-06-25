@@ -2,6 +2,16 @@ import type { MetaData, MetaCreative, MetricPoint } from './data'
 
 const GRAPH_BASE = 'https://graph.facebook.com/v21.0'
 
+// Manually confirmed post URLs — these override whatever the API resolves.
+const PERMALINK_OVERRIDES: Record<string, string> = {
+  'Ad 1 - IMG 1': 'https://www.facebook.com/permalink.php?story_fbid=1453154153524816&id=142188242493004',
+  'Ad 2 - IMG 2': 'https://www.facebook.com/100064907341239/posts/1453154153524816/',
+  'Ad 3 - IMG 3': 'https://www.facebook.com/100064907341239/posts/1449610037212561/',
+  'Ad 4 - VID 1': 'https://www.facebook.com/100064907341239/posts/1453213133518918/',
+  'Ad 6 - VID 2': 'https://www.facebook.com/100064907341239/posts/1453154326858132/',
+  'Ad 7 - VID 3': 'https://www.facebook.com/100064907341239/posts/1453851853455046/',
+}
+
 export function hasMetaCreds(): boolean {
   return !!(process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID)
 }
@@ -14,6 +24,7 @@ interface RawRow {
   date_start?: string
   ad_id?: string
   ad_name?: string
+  adset_name?: string
 }
 
 function findAction(
@@ -51,12 +62,13 @@ async function queryInsights(extraParams: Record<string, string>): Promise<RawRo
   return rows
 }
 
-async function fetchPermalinks(adIds: string[]): Promise<Record<string, string>> {
+async function fetchPermalinks(adIds: string[], accountId: string): Promise<Record<string, string>> {
   if (!adIds.length) return {}
   const token = process.env.META_ACCESS_TOKEN!
-  // Only VIDEO object_type has a real post permalink. SHARE type uses an
-  // Advantage+ placement template dark post that renders {{product.brand}} placeholders.
+  // VIDEO type has a real post permalink. SHARE type (Advantage+ PLACEMENT format)
+  // uses a template dark post — fall back to Ads Manager URL instead.
   const url = `${GRAPH_BASE}/?ids=${adIds.join(',')}&fields=creative{effective_object_story_id,object_type}&access_token=${token}`
+  const amsBase = `https://www.facebook.com/adsmanager/manage/ads?act=${accountId}&selected_ad_ids=`
   try {
     const res = await fetch(url)
     const json = await res.json() as Record<string, {
@@ -64,16 +76,19 @@ async function fetchPermalinks(adIds: string[]): Promise<Record<string, string>>
     }>
     const out: Record<string, string> = {}
     for (const [adId, data] of Object.entries(json)) {
-      if (data.creative?.object_type !== 'VIDEO') continue
-      const storyId = data.creative?.effective_object_story_id
-      if (storyId) {
-        const idx = storyId.indexOf('_')
-        if (idx !== -1) {
-          const pageId = storyId.slice(0, idx)
-          const postId = storyId.slice(idx + 1)
-          out[adId] = `https://www.facebook.com/permalink.php?story_fbid=${postId}&id=${pageId}`
+      if (data.creative?.object_type === 'VIDEO') {
+        const storyId = data.creative?.effective_object_story_id
+        if (storyId) {
+          const idx = storyId.indexOf('_')
+          if (idx !== -1) {
+            const pageId = storyId.slice(0, idx)
+            const postId = storyId.slice(idx + 1)
+            out[adId] = `https://www.facebook.com/permalink.php?story_fbid=${postId}&id=${pageId}`
+            continue
+          }
         }
       }
+      out[adId] = `${amsBase}${adId}`
     }
     return out
   } catch {
@@ -94,7 +109,7 @@ export async function fetchMetaData(): Promise<MetaData> {
       filtering: campaignFilter,
     }),
     queryInsights({
-      fields: 'ad_id,ad_name,impressions,spend,actions,outbound_clicks',
+      fields: 'ad_id,ad_name,adset_name,impressions,spend,actions,outbound_clicks',
       level: 'ad',
       date_preset: 'maximum',
       filtering: campaignFilter,
@@ -115,7 +130,7 @@ export async function fetchMetaData(): Promise<MetaData> {
   const lastDate = dailyRows.at(-1)?.date_start ?? new Date().toISOString().split('T')[0]
 
   const adIds = adRows.map(r => r.ad_id).filter(Boolean) as string[]
-  const permalinks = await fetchPermalinks(adIds)
+  const permalinks = await fetchPermalinks(adIds, process.env.META_AD_ACCOUNT_ID!)
 
   const creatives: MetaCreative[] = adRows.map(row => {
     const lpv = findAction(row.actions, 'landing_page_view')
@@ -125,9 +140,10 @@ export async function fetchMetaData(): Promise<MetaData> {
     return {
       id,
       name: row.ad_name ?? 'Unknown',
+      adsetName: row.adset_name ?? null,
       status: 'active',
       utmContent: null,
-      permalink: permalinks[id] ?? null,
+      permalink: PERMALINK_OVERRIDES[row.ad_name ?? ''] ?? permalinks[id] ?? null,
       impressions: parseInt(row.impressions ?? '0', 10),
       outboundClicks: clicks,
       landingPageViews: lpv,

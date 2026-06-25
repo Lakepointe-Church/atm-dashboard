@@ -338,6 +338,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
           <thead>
             <tr style={{ background: colors.surfaceAlt }}>
               <TH>Creative</TH>
+              <TH>Ad Set</TH>
               <TH>Impressions</TH>
               <TH right>Outbound Clicks</TH>
               <TH right>Landing Page Views</TH>
@@ -362,6 +363,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
                     </span>
                   )}
                 </TD>
+                <TD muted={!c.adsetName}>{c.adsetName ?? '—'}</TD>
                 <TD right>{fmtNum(c.impressions)}</TD>
                 <TD right muted={c.outboundClicks == null}>{fmtNum(c.outboundClicks)}</TD>
                 <TD right>{fmtNum(c.landingPageViews)}</TD>
@@ -373,6 +375,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
           <tfoot>
             <tr style={{ borderTop: `2px solid ${colors.borderStrong}`, background: colors.surfaceAlt }}>
               <TD bold>Total (active ads)</TD>
+              <TD muted>—</TD>
               <TD right bold>{totalImpressions.toLocaleString('en-US')}</TD>
               <TD right muted>—</TD>
               <TD right bold>{totalLPV.toLocaleString('en-US')}</TD>

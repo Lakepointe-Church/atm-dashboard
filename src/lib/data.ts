@@ -41,6 +41,7 @@ export type PageMetrics = {
 export type MetaCreative = {
   id: string
   name: string
+  adsetName: string | null
   status: 'active' | 'off'
   utmContent: string | null
   permalink: string | null
@@ -215,6 +216,7 @@ async function getMeta(): Promise<MetaData> {
     creatives: (raw.creatives ?? []).map((c) => ({
       id: c.id,
       name: c.name,
+      adsetName: null,
       status: c.status,
       utmContent: c.utm_content,
       permalink: null,
