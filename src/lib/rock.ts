@@ -1,6 +1,12 @@
 const ROCK_DATASET_URL =
   'https://rock.lakepointe.church/api/v2/models/persisteddatasets/6'
 
+// The persisted dataset returns the church's ENTIRE keyword catalog (130+ keys:
+// give, group, podcast, marriage, easter, …). We scope to the ATM 2026 campaign
+// keywords only. Add a keyword here when the campaign gains another one — that is
+// the single edit required; everything downstream iterates whatever is present.
+const CAMPAIGN_KEYWORDS = ['atm', 'movies'] as const
+
 export type SmsKeyword = {
   keyword: string
   total: number
@@ -33,22 +39,36 @@ export async function fetchRockSmsData(): Promise<SmsData> {
 
   const body: unknown = await res.json()
 
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    !('resultData' in body) ||
-    typeof (body as { resultData: unknown }).resultData !== 'object' ||
-    (body as { resultData: unknown }).resultData === null
-  ) {
+  if (typeof body !== 'object' || body === null || !('resultData' in body)) {
     throw new Error(
-      `[Rock] Unexpected response shape: ${JSON.stringify(body).slice(0, 200)}`
+      `[Rock] Response missing resultData: ${JSON.stringify(body).slice(0, 200)}`
     )
   }
 
-  const resultData = (body as { resultData: Record<string, unknown> }).resultData
+  // Rock returns resultData as a JSON-ENCODED STRING, not a nested object.
+  const rawResult = (body as { resultData: unknown }).resultData
+  if (typeof rawResult !== 'string') {
+    throw new Error(
+      `[Rock] Expected resultData to be a JSON string, got ${typeof rawResult}`
+    )
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawResult)
+  } catch (err) {
+    throw new Error(`[Rock] resultData is not valid JSON: ${(err as Error).message}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('[Rock] Parsed resultData is not an object')
+  }
+
+  const all = parsed as Record<string, unknown>
   const keywords: SmsKeyword[] = []
 
-  for (const [keyword, raw] of Object.entries(resultData)) {
+  for (const keyword of CAMPAIGN_KEYWORDS) {
+    const raw = all[keyword]
+    if (raw === undefined) continue // not present yet — renders as placeholder upstream
     if (
       typeof raw !== 'object' ||
       raw === null ||
