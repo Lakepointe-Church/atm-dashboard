@@ -135,6 +135,7 @@ export async function fetchMetaData(): Promise<MetaData> {
   const creatives: MetaCreative[] = adRows.map(row => {
     const lpv = findAction(row.actions, 'landing_page_view')
     const clicks = findAction(row.outbound_clicks, 'outbound_click')
+    const leads = findAction(row.actions, 'lead') || findAction(row.actions, 'offsite_conversion.fb_pixel_lead')
     const spent = parseFloat(row.spend ?? '0')
     const id = row.ad_id ?? 'unknown'
     return {
@@ -147,8 +148,10 @@ export async function fetchMetaData(): Promise<MetaData> {
       impressions: parseInt(row.impressions ?? '0', 10),
       outboundClicks: clicks,
       landingPageViews: lpv,
+      leads: leads > 0 ? leads : null,
       amountSpent: parseFloat(spent.toFixed(2)),
       costPerLpv: lpv > 0 ? parseFloat((spent / lpv).toFixed(2)) : null,
+      costPerLead: leads > 0 ? parseFloat((spent / leads).toFixed(2)) : null,
     }
   })
 
