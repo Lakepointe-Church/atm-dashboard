@@ -19,6 +19,7 @@ import { fetchGA4Data } from './ga4'
 import { fetchHubspotSubmissionCount } from './hubspot'
 import { getHistory } from './db'
 import { hasMetaCreds, fetchMetaData } from './meta'
+import { fetchRockSmsData, type SmsData } from './rock'
 
 // --- Types -----------------------------------------------------------------
 
@@ -48,8 +49,10 @@ export type MetaCreative = {
   impressions: number | null
   outboundClicks: number | null
   landingPageViews: number | null
+  leads: number | null
   amountSpent: number | null
   costPerLpv: number | null
+  costPerLead: number | null
 }
 
 /** The Meta (manual) data, read from /data/meta.json. */
@@ -99,6 +102,8 @@ export type DashboardData = {
   }
   /** Meta Ads data (live API or fallback meta.json). */
   meta: MetaData
+  /** SMS keyword counts from Rock CTA Keyword report. null = fetch failed or token absent. */
+  sms: SmsData | null
   /** Most recent successful automated sync (GA4/HubSpot). */
   lastUpdated: string
   /** True while GA4/HubSpot history is seeded/illustrative, not yet live. */
@@ -223,8 +228,10 @@ async function getMeta(): Promise<MetaData> {
       impressions: c.impressions,
       outboundClicks: c.outbound_clicks,
       landingPageViews: c.landing_page_views,
+      leads: null,
       amountSpent: c.amount_spent,
       costPerLpv: c.cost_per_lpv,
+      costPerLead: null,
     })),
   }
 }
@@ -344,10 +351,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   const meta = await getMeta()
 
   if (hasGA4Creds()) {
-    const [ga4, formSubmissions, neon] = await Promise.all([
+    const [ga4, formSubmissions, neon, sms] = await Promise.all([
       fetchGA4Data(),
       getHubspot(),
       loadNeonHistory(),
+      fetchRockSmsData().catch(err => { console.error(err); return null }),
     ])
 
     // Merge GA4 daily history (full date range) with Neon snapshots (June 19+).
@@ -377,6 +385,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       churchFacing: atTheMovies,
       metaAd: { ...atmSocial, conversionRate, costPerLead },
       utmChannels: buildUtmChannels(ga4.channels, neon?.channels ?? null),
+      sms,
       meta,
       lastUpdated: neon?.lastUpdated ?? ga4.lastUpdated,
       seeded: false,
@@ -384,7 +393,10 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   const { data, lastUpdated, seeded } = loadSeed()
-  const formSubmissions = await getHubspot()
+  const [formSubmissions, sms] = await Promise.all([
+    getHubspot(),
+    fetchRockSmsData().catch(err => { console.error(err); return null }),
+  ])
   const pageViews = data.atmSocial.pageViews.value
   const submissions = formSubmissions.value
   const conversionRate = pageViews > 0 ? (submissions / pageViews) * 100 : 0
@@ -412,6 +424,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       organicSocialLinktree: emptyChannel(),
       organicSocialGroups: emptyChannel(),
     },
+    sms,
     meta,
     lastUpdated,
     seeded,

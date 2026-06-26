@@ -31,15 +31,14 @@ function prettyDate(iso: string) {
 }
 
 const GRID_4 = 'repeat(auto-fit, minmax(180px, 1fr))'
-const GRID_2 = 'repeat(auto-fit, minmax(320px, 1fr))'
+const GRID_2 = 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))'
 
 export default async function DashboardPage() {
   const d = await getDashboardData()
 
   return (
-    <main style={{
+    <main className="page-main" style={{
       position: 'relative', zIndex: 1, maxWidth: '1120px', margin: '0 auto',
-      padding: '48px 24px 80px',
     }}>
       {/* ── Header ─────────────────────────────────────────── */}
       <header className="fade-up" style={{ marginBottom: '44px' }}>
@@ -50,7 +49,7 @@ export default async function DashboardPage() {
           Lakepointe Church · Campaign Analytics
         </div>
         <h1 style={{
-          fontFamily: fonts.display, fontWeight: 700, fontSize: '54px', letterSpacing: '-0.015em',
+          fontFamily: fonts.display, fontWeight: 700, fontSize: 'clamp(32px, 8vw, 54px)', letterSpacing: '-0.015em',
           color: colors.ink, lineHeight: 1.04, marginBottom: '14px', maxWidth: '16ch',
         }}>
           At the Movies
@@ -82,7 +81,16 @@ export default async function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
           <StatCard label="Total Page Views" value={fmt(d.summary.totalPageViews)} sub="all channels" color={colors.orange} compact />
           <StatCard label="Form Submissions" value={fmt(d.summary.totalFormSubmissions)} sub="HubSpot" color={colors.slate} compact />
-          <PlaceholderCard label="Total Texts" note="Awaiting Rock API" compact />
+          {d.sms
+            ? <StatCard
+                label="Total Texts"
+                value={fmt(d.sms.keywords.reduce((sum, k) => sum + k.total, 0))}
+                sub={d.sms.keywords.map(k => k.keyword.toUpperCase()).join(' + ')}
+                color={colors.slate}
+                compact
+              />
+            : <PlaceholderCard label="Total Texts" note="Awaiting Rock API" compact />
+          }
           {d.summary.totalMetaSpend != null
             ? <StatCard label="Meta Spend" value={`$${fmt(Math.round(d.summary.totalMetaSpend))}`} sub="Meta API" color={colors.lpGray} compact />
             : <PlaceholderCard label="Meta Spend" note="Awaiting Meta data" compact />
@@ -120,7 +128,7 @@ export default async function DashboardPage() {
           accent={colors.orange}
           marginBottom="16px"
         />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           <StatCard label="GA4 Page Views" value={fmt(d.metaAd.pageViews.value)} color={colors.orange} />
           <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
           <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
@@ -169,7 +177,12 @@ export default async function DashboardPage() {
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
-          <PlaceholderCard label="Texts Sent — ATM keyword" note="Awaiting Rock API access" />
+          {(() => {
+            const kw = d.sms?.keywords.find(k => k.keyword === 'atm')
+            return kw
+              ? <StatCard label="Texts — ATM" value={fmt(kw.total)} sub={`${fmt(kw.unique)} unique · ${fmt(kw.new)} new`} color={colors.slate} />
+              : <PlaceholderCard label="Texts — ATM keyword" note={d.sms ? 'Keyword not yet in Rock data' : 'Awaiting Rock API'} />
+          })()}
           <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.podcast.pageViews.value)} color={colors.slate} />
           <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.podcast.activeUsers.value)} color={colors.slate} />
         </div>
@@ -184,7 +197,12 @@ export default async function DashboardPage() {
           marginBottom="16px"
         />
         <div style={{ display: 'grid', gridTemplateColumns: GRID_4, gap: '16px' }}>
-          <PlaceholderCard label="Texts Sent — MOVIES keyword" note="Awaiting Rock API access" />
+          {(() => {
+            const kw = d.sms?.keywords.find(k => k.keyword === 'movies')
+            return kw
+              ? <StatCard label="Texts — MOVIES" value={fmt(kw.total)} sub={`${fmt(kw.unique)} unique · ${fmt(kw.new)} new`} color={colors.lpGray} />
+              : <PlaceholderCard label="Texts — MOVIES keyword" note={d.sms ? 'Keyword not yet in Rock data' : 'Awaiting Rock API'} />
+          })()}
           <StatCard label="GA4 Page Views" value={fmt(d.utmChannels.movieTheaters.pageViews.value)} color={colors.lpGray} />
           <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.movieTheaters.activeUsers.value)} color={colors.lpGray} />
         </div>
@@ -198,9 +216,15 @@ export default async function DashboardPage() {
           accent={colors.orange}
           marginBottom="16px"
         />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '16px', alignItems: 'stretch' }}>
-          {/* Chart — explicitly placed at column 3, spanning all 3 rows */}
-          <div style={{ gridColumn: '3', gridRow: '1 / 4', display: 'flex', flexDirection: 'column' }}>
+        <div className="email-grid">
+          {/* Rows 1–3: stat card pairs (cols 1–2). Chart auto-placed at col 3 on desktop, full-width last row on mobile. */}
+          <StatCard label="E News Page Views"   value={fmt(d.utmChannels.eNews.pageViews.value)}   sub="utm_medium=e_news" color={colors.orange} />
+          <StatCard label="E News Active Users" value={fmt(d.utmChannels.eNews.activeUsers.value)} sub="utm_medium=e_news" color={colors.orange} />
+          <StatCard label="Kids Newsletter Page Views"   value={fmt(d.utmChannels.kidsNewsletter.pageViews.value)}   sub="utm_medium=kids_newsletter" color={colors.slate} />
+          <StatCard label="Kids Newsletter Active Users" value={fmt(d.utmChannels.kidsNewsletter.activeUsers.value)} sub="utm_medium=kids_newsletter" color={colors.slate} />
+          <StatCard label="Invite Page Views"   value={fmt(d.utmChannels.invite.pageViews.value)}   sub="utm_medium=stand_alone_1" color={colors.lpGray} />
+          <StatCard label="Invite Active Users" value={fmt(d.utmChannels.invite.activeUsers.value)} sub="utm_medium=stand_alone_1" color={colors.lpGray} />
+          <div className="email-chart-col">
             <Surface padding="20px 22px 14px" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '16px' }}>
                 <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: colors.orange }} />
@@ -220,15 +244,6 @@ export default async function DashboardPage() {
               </div>
             </Surface>
           </div>
-          {/* Row 1: E News */}
-          <StatCard label="E News Page Views"   value={fmt(d.utmChannels.eNews.pageViews.value)}   sub="utm_medium=e_news" color={colors.orange} />
-          <StatCard label="E News Active Users" value={fmt(d.utmChannels.eNews.activeUsers.value)} sub="utm_medium=e_news" color={colors.orange} />
-          {/* Row 2: Kids Newsletter */}
-          <StatCard label="Kids Newsletter Page Views"   value={fmt(d.utmChannels.kidsNewsletter.pageViews.value)}   sub="utm_medium=kids_newsletter" color={colors.slate} />
-          <StatCard label="Kids Newsletter Active Users" value={fmt(d.utmChannels.kidsNewsletter.activeUsers.value)} sub="utm_medium=kids_newsletter" color={colors.slate} />
-          {/* Row 3: Invite */}
-          <StatCard label="Invite Page Views"   value={fmt(d.utmChannels.invite.pageViews.value)}   sub="utm_medium=stand_alone_1" color={colors.lpGray} />
-          <StatCard label="Invite Active Users" value={fmt(d.utmChannels.invite.activeUsers.value)} sub="utm_medium=stand_alone_1" color={colors.lpGray} />
         </div>
       </section>
 
@@ -308,13 +323,15 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
   const active = creatives.filter(c => c.status === 'active')
   const totalImpressions = active.reduce((s, c) => s + (c.impressions ?? 0), 0)
   const totalLPV = active.reduce((s, c) => s + (c.landingPageViews ?? 0), 0)
+  const totalLeads = active.reduce((s, c) => s + (c.leads ?? 0), 0)
+  const hasLeads = active.some(c => c.leads != null)
 
-  const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
+  const TH = ({ children, right, wrap }: { children: React.ReactNode; right?: boolean; wrap?: boolean }) => (
     <th style={{
       fontFamily: fonts.sans, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.1em',
       textTransform: 'uppercase', color: colors.label, padding: '10px 14px',
       textAlign: right ? 'right' : 'left', borderBottom: `1px solid ${colors.border}`,
-      whiteSpace: 'nowrap',
+      whiteSpace: wrap ? 'normal' : 'nowrap',
     }}>{children}</th>
   )
 
@@ -340,9 +357,11 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
               <TH>Creative</TH>
               <TH>Ad Set</TH>
               <TH>Impressions</TH>
-              <TH right>Outbound Clicks</TH>
-              <TH right>Landing Page Views</TH>
-              <TH right>Amount Spent</TH>
+              <TH right wrap>Outbound Clicks</TH>
+              <TH right wrap>Landing Page Views</TH>
+              {hasLeads && <TH right>Leads</TH>}
+              {hasLeads && <TH right>Cost / Lead</TH>}
+              <TH right wrap>Amount Spent</TH>
               <TH right>Cost / LPV</TH>
             </tr>
           </thead>
@@ -367,6 +386,8 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
                 <TD right>{fmtNum(c.impressions)}</TD>
                 <TD right muted={c.outboundClicks == null}>{fmtNum(c.outboundClicks)}</TD>
                 <TD right>{fmtNum(c.landingPageViews)}</TD>
+                {hasLeads && <TD right muted={c.leads == null}>{fmtNum(c.leads)}</TD>}
+                {hasLeads && <TD right muted={c.costPerLead == null}>{fmtCurrency(c.costPerLead)}</TD>}
                 <TD right>{fmtCurrency(c.amountSpent)}</TD>
                 <TD right muted={c.costPerLpv == null}>{fmtCurrency(c.costPerLpv)}</TD>
               </tr>
@@ -379,6 +400,8 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
               <TD right bold>{totalImpressions.toLocaleString('en-US')}</TD>
               <TD right muted>—</TD>
               <TD right bold>{totalLPV.toLocaleString('en-US')}</TD>
+              {hasLeads && <TD right bold>{totalLeads > 0 ? totalLeads.toLocaleString('en-US') : '—'}</TD>}
+              {hasLeads && <TD right muted>—</TD>}
               <TD right bold>{fmtCurrency(totalAmountSpent)}</TD>
               <TD right muted>—</TD>
             </tr>
