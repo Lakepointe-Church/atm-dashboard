@@ -19,8 +19,8 @@ export function StatCard({ label, value, sub, color, loading, compact }: {
 }) {
   const [hov, setHov] = useState(false)
   const d = compact
-    ? { padding: '20px 22px 18px', labelMb: '10px', value: '40px', skel: '34px', sub: '11px', subMt: '8px' }
-    : { padding: '24px 24px 22px', labelMb: '12px', value: '46px', skel: '40px', sub: '12px', subMt: '10px' }
+    ? { padding: '20px 22px 18px', labelMb: '10px', value: '32px', skel: '28px', sub: '11px', subMt: '8px' }
+    : { padding: '24px 24px 22px', labelMb: '12px', value: '38px', skel: '32px', sub: '12px', subMt: '10px' }
   return (
     <div
       onMouseEnter={() => setHov(true)}
