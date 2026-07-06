@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { ensureSchema, upsertMetrics } from '@/lib/db'
 import { fetchGA4Data } from '@/lib/ga4'
 import { fetchHubspotSubmissionCount } from '@/lib/hubspot'
+import { hasTiktokCreds, fetchTiktokData } from '@/lib/tiktok'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,31 @@ export async function GET() {
 
     await upsertMetrics(today, metrics)
 
-    return NextResponse.json({ ok: true, date: today, metrics })
+    // TikTok: canonical write path, snake_case tiktok_* keys. Spend stored in
+    // cents (metric_history.value is INTEGER). Isolated so a TikTok failure is
+    // loud but doesn't roll back the GA4/HubSpot writes above.
+    let tiktok: Record<string, number> | null = null
+    let tiktokError: string | null = null
+    if (hasTiktokCreds()) {
+      try {
+        const tt = await fetchTiktokData()
+        tiktok = {
+          tiktok_spend_cents:        Math.round(tt.spend * 100),
+          tiktok_impressions:        tt.impressions,
+          tiktok_clicks:             tt.clicks,
+          tiktok_landing_page_views: tt.landingPageViews,
+          tiktok_video_views:        tt.videoViews,
+          tiktok_video_views_6s:     tt.videoViews6s,
+          tiktok_video_views_p100:   tt.videoViewsP100,
+        }
+        await upsertMetrics(today, tiktok)
+      } catch (err) {
+        console.error('[sync] TikTok error:', err)
+        tiktokError = String(err)
+      }
+    }
+
+    return NextResponse.json({ ok: !tiktokError, date: today, metrics, tiktok, tiktokError })
   } catch (err) {
     console.error('[sync] error:', err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })

@@ -31,6 +31,7 @@ Full product spec: [`ATM_Dashboard_Spec.md`](ATM_Dashboard_Spec.md).
 | **GA4** | Live | `src/lib/ga4.ts` — service account auth via `GA4_SERVICE_ACCOUNT_KEY` + `GA4_PROPERTY_ID`. Two queries per load: daily breakdown (history) + totals. Filters `CONTAINS atm-social` and `CONTAINS at-the-movies`. Note: a malformed GA4 path `/at-the-https:/...` also matches — fixed by summing instead of overwriting. |
 | **HubSpot form submissions** | Live | `src/lib/hubspot.ts` — Service Key bearer token via `HUBSPOT_PRIVATE_APP_TOKEN`. Paginates `form-integrations/v1/submissions/forms/{formId}` (50/page) to count total; no `total` field in response. Form ID: `d2248827-6c54-4792-bf25-697ed9292e15`, Portal: `43908455`. |
 | **Meta landing page views** | Live | `src/lib/meta.ts` — System User token via `META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`. Calls `act_{id}/insights` with `filtering` scoped to campaign name `CONTAIN "ATM 2026"`. Fetches daily breakdown + per-ad creative stats. Returns full lifetime history on every request (no Neon needed). Falls back to `data/meta.json` if API fails. |
+| **TikTok Ads** | Live | `src/lib/tiktok.ts` — long-lived advertiser token via `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID`. Calls `report/integrated/get/` (v1.3, host `business-api.tiktok.com`, `Access-Token` header, `report_type=BASIC`) filtered by campaign_id `1869425945879842` ("ATM 2026" Smart+). Errors key off JSON `code` (0=ok), never HTTP status; non-zero throws with `message`+`request_id`. Scopes are **report-only** — `advertiser/info`, `campaign/get`, `ad/get` all return `code 40001` (so no account timezone or per-ad public URL via API; tz **confirmed UTC-06:00 fixed, no DST**, from the Ads Manager date picker — verified Jun 30, 2026 totals match exactly). `conversion` deliberately NOT surfaced (pixel-event optimization artifact, not leads). `stat_time_day` capped at 30-day spans → history chunked. On failure the section renders "awaiting data", never zeros. Sync stores `tiktok_*` keys (spend as cents). |
 | **Neon history** | Live | `src/lib/db.ts` + `DATABASE_URL` (set via Vercel Storage → `neon-atm`). `/api/sync` upserts one row per metric per day. Dashboard uses Neon history arrays when populated; falls back to GA4 direct history + `data/hubspot.json` when empty. |
 
 **Cron:** `vercel.json` runs `/api/sync` at `0 11 * * *` and `0 23 * * *` UTC (6am/6pm Central).
@@ -112,6 +113,9 @@ All set in Vercel (never committed). `.env*` is gitignored.
 | `DATABASE_URL` | Neon connection string. Set automatically via Vercel Storage → `neon-atm`. Sensitive — not available via `vercel env pull`. |
 | `META_ACCESS_TOKEN` | System User token from Business Manager → LP Campaign Reader system user. Sensitive — Production + Preview only. |
 | `META_AD_ACCOUNT_ID` | Numeric ad account ID (without `act_` prefix). Production + Preview only. |
+| `TIKTOK_ACCESS_TOKEN` | Long-lived TikTok advertiser token ("Lakepointe Church Ads" app; report-only scopes). No refresh flow — on auth error, re-authorize. Sensitive — won't come through `vercel env pull`. |
+| `TIKTOK_ADVERTISER_ID` | `7296191293187932161`. Sensitive. |
+| `TIKTOK_AD_APP_ID` | TikTok app ID. Sensitive. |
 
 > **Local dev note:** `DATABASE_URL` is a Sensitive var and won't come through `vercel env pull`.
 > The dashboard falls back gracefully to live GA4/HubSpot + seed history when it's absent.

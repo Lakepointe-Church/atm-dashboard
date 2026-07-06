@@ -19,6 +19,7 @@ import { fetchGA4Data } from './ga4'
 import { fetchHubspotSubmissionCount } from './hubspot'
 import { getHistory } from './db'
 import { hasMetaCreds, fetchMetaData } from './meta'
+import { hasTiktokCreds, fetchTiktokData } from './tiktok'
 import { fetchRockSmsData, type SmsData } from './rock'
 
 // --- Types -----------------------------------------------------------------
@@ -65,6 +66,47 @@ export type MetaData = {
   creatives: MetaCreative[]
 }
 
+/**
+ * One TikTok ad's lifetime stats, from the TikTok Marketing API v1.3 integrated
+ * report. Keyed on ad_id (Smart+ replicates the same creative across ad groups,
+ * so ad_name can repeat — ad_id is the unique row key). null = metric absent
+ * (awaiting); a stored 0 is a confirmed real zero.
+ */
+export type TiktokCreative = {
+  id: string                    // ad_id
+  name: string                  // ad_name
+  adgroupName: string | null    // adgroup_name (Meta's "Ad Set" analog)
+  impressions: number | null
+  clicks: number | null
+  landingPageViews: number | null   // total_landing_page_view
+  amountSpent: number | null        // spend
+  costPerLpv: number | null         // derived spend ÷ LPV; null if LPV 0/absent
+  videoViews: number | null         // video_play_actions
+  videoViews6s: number | null       // video_watched_6s
+  videoViewsP100: number | null     // video_views_p100
+}
+
+/**
+ * TikTok Ads data (live from TikTok Marketing API v1.3). Platform-native only —
+ * no GA4/HubSpot numbers here. `conversion`/`cost_per_conversion` are
+ * deliberately NOT surfaced (pixel-event optimization artifact, not a lead
+ * count — see Gate A decisions). null TiktokData = pull failed / creds absent →
+ * section renders "awaiting data".
+ */
+export type TiktokData = {
+  lastUpdated: string
+  spend: number
+  impressions: number
+  clicks: number
+  landingPageViews: number
+  videoViews: number            // video_play_actions
+  videoViews6s: number          // video_watched_6s
+  videoViewsP100: number        // video_views_p100
+  history: MetricPoint[]        // cumulative landing page views by day
+  creatives: TiktokCreative[]
+  note: string
+}
+
 /** Campaign-wide totals for the summary strip. */
 export type SummaryData = {
   totalPageViews: number
@@ -102,6 +144,8 @@ export type DashboardData = {
   }
   /** Meta Ads data (live API or fallback meta.json). */
   meta: MetaData
+  /** TikTok Ads data (live API). null = fetch failed or creds absent → awaiting. */
+  tiktok: TiktokData | null
   /** SMS keyword counts from Rock CTA Keyword report. null = fetch failed or token absent. */
   sms: SmsData | null
   /** Most recent successful automated sync (GA4/HubSpot). */
@@ -236,6 +280,20 @@ async function getMeta(): Promise<MetaData> {
   }
 }
 
+// --- TikTok (live API; null when creds absent or the pull fails) ------------
+
+async function getTiktok(): Promise<TiktokData | null> {
+  if (!hasTiktokCreds()) return null
+  try {
+    return await fetchTiktokData()
+  } catch (err) {
+    // Loud, but non-fatal to the page: a failed pull renders as "awaiting data",
+    // never as zeros. The thrown error carries message + request_id.
+    console.error('[TikTok] API fetch failed, rendering awaiting state:', err)
+    return null
+  }
+}
+
 // --- Neon history ----------------------------------------------------------
 
 function buildMetricFromRows(
@@ -348,7 +406,7 @@ function buildUtmChannels(
 // --- Public API ------------------------------------------------------------
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const meta = await getMeta()
+  const [meta, tiktok] = await Promise.all([getMeta(), getTiktok()])
 
   if (hasGA4Creds()) {
     const [ga4, formSubmissions, neon, sms] = await Promise.all([
@@ -387,6 +445,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       utmChannels: buildUtmChannels(ga4.channels, neon?.channels ?? null),
       sms,
       meta,
+      tiktok,
       lastUpdated: neon?.lastUpdated ?? ga4.lastUpdated,
       seeded: false,
     }
@@ -426,6 +485,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     },
     sms,
     meta,
+    tiktok,
     lastUpdated,
     seeded,
   }

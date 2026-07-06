@@ -1,4 +1,4 @@
-import { getDashboardData, type MetaCreative } from '@/lib/data'
+import { getDashboardData, type MetaCreative, type TiktokCreative, type TiktokData } from '@/lib/data'
 import { colors, fonts, shadow } from '@/lib/theme'
 import { StatCard } from '@/components/ui/StatCard'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -16,6 +16,7 @@ const FOOTNOTES = [
   '"Church Facing" = at-the-movies traffic with no campaign UTM (direct/organic member visits).',
   'HubSpot form views run higher than GA4 page views due to differences in how each tool tracks; GA4 is the more reliable traffic figure.',
   'Meta numbers are pulled live from the Meta Marketing API, filtered to the ATM 2026 campaign. data/meta.json remains as a fallback only.',
+  'TikTok numbers are pulled live from the TikTok Marketing API (v1.3), filtered to the ATM 2026 Smart+ campaign. TikTok Landing Views is TikTok\'s own attribution — a distinct figure from GA4 Page Views. Leads show "—" because this campaign runs no lead event; its on-platform pixel conversions are an optimization signal, not lead counts, so they are not shown.',
   'UTM parameters are in place for all ads (utm_content=vid2/img1/img2/img3). VID 1 predates UTM setup and has no content tag.',
   'Text counts come from Rock\'s CTA Keyword report (ATM and MOVIES keywords), pulled separately from web analytics.',
   'Cost per lead = total Meta ad spend ÷ HubSpot form submissions.',
@@ -189,6 +190,9 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* ── TikTok Ads ─────────────────────────────────────── */}
+      <TiktokSection tiktok={d.tiktok} />
 
       {/* ── Podcast ────────────────────────────────────────── */}
       <section className="fade-up-3" style={{ marginBottom: '44px' }}>
@@ -426,6 +430,158 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
               {hasLeads && <TD right muted>—</TD>}
               <TD right bold>{fmtCurrency(totalAmountSpent)}</TD>
               <TD right muted>—</TD>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </Surface>
+  )
+}
+
+// ── TikTok Ads section ───────────────────────────────────────────────────────
+// Platform-native only (no GA4/HubSpot here — that lives in the shared Paid Ads
+// block). Renders "awaiting data" placeholders when the pull failed / creds are
+// absent (tiktok === null). A stored 0 is a confirmed real zero and shows as 0.
+
+function TiktokSection({ tiktok }: { tiktok: TiktokData | null }) {
+  return (
+    <section className="fade-up-2" style={{ marginBottom: '52px' }}>
+      <SectionHeader
+        title="TikTok Ads"
+        sub="TikTok Marketing API · ATM 2026 Smart+ · platform-attributed metrics"
+        accent={colors.slate}
+        marginBottom="16px"
+      />
+      {tiktok
+        ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+              <StatCard label="Amount Spent"      value={`$${fmt(Math.round(tiktok.spend))}`} sub="TikTok API"          color={colors.orange} />
+              <StatCard label="Impressions"       value={fmt(tiktok.impressions)}             sub="TikTok API"          color={colors.slate} />
+              <StatCard label="Clicks"            value={fmt(tiktok.clicks)}                  sub="destination clicks"  color={colors.slate} />
+              <StatCard label="TikTok Landing Views" value={fmt(tiktok.landingPageViews)}     sub="TikTok-attributed"   color={colors.lpGray} />
+              <StatCard label="Video Views"       value={fmt(tiktok.videoViews)}              sub="video plays"         color={colors.slate} />
+              <StatCard label="6-Sec Views"       value={fmt(tiktok.videoViews6s)}            sub="focused views"       color={colors.lpGray} />
+              <StatCard label="100% Completions"  value={fmt(tiktok.videoViewsP100)}          sub="watched to end"      color={colors.lpGray} />
+            </div>
+
+            {tiktok.creatives.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <TiktokCreativesTable creatives={tiktok.creatives} />
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
+              <ChartPanel title="TikTok Landing Page Views" accent={colors.slate}>
+                <TrendChart series={[{ key: 'tiktokLpv', label: 'landing views', color: colors.slate, data: tiktok.history }]} />
+              </ChartPanel>
+            </div>
+          </>
+        )
+        : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+            {['Amount Spent', 'Impressions', 'Clicks', 'TikTok Landing Views', 'Video Views', '6-Sec Views', '100% Completions'].map(label => (
+              <PlaceholderCard key={label} label={label} note="Awaiting TikTok API" />
+            ))}
+          </div>
+        )}
+    </section>
+  )
+}
+
+// ── TikTok Ad Creatives table ────────────────────────────────────────────────
+// Mirrors the Meta table. Rows key on ad_id (Smart+ replicates a creative across
+// ad groups, so ad_name repeats). Leads render "—" for every row — this campaign
+// has no lead event; an honest dash beats a misleading number (Gate A decision).
+
+// TikTok ad_name is the full asset filename with a human label appended after
+// the media extension, e.g. "2026_atm_ad-4_notebook_..._final_x.mp4_The Note Book
+// Spoof". Show just the trailing label so the table fits without side-scroll.
+function tiktokLabel(name: string): string {
+  const m = name.match(/\.(?:mp4|mov|webm|jpe?g|png|gif)_(.+)$/i)
+  return (m ? m[1] : name).trim()
+}
+
+function TiktokCreativesTable({ creatives }: { creatives: TiktokCreative[] }) {
+  const sum = (pick: (c: TiktokCreative) => number | null) =>
+    creatives.reduce((s, c) => s + (pick(c) ?? 0), 0)
+  const totalSpent = sum(c => c.amountSpent)
+  const totalImpr = sum(c => c.impressions)
+  const totalClicks = sum(c => c.clicks)
+  const totalLpv = sum(c => c.landingPageViews)
+  const totalViews = sum(c => c.videoViews)
+  const totalViews6s = sum(c => c.videoViews6s)
+  const totalP100 = sum(c => c.videoViewsP100)
+
+  const TH = ({ children, right, wrap }: { children: React.ReactNode; right?: boolean; wrap?: boolean }) => (
+    <th style={{
+      fontFamily: fonts.sans, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.1em',
+      textTransform: 'uppercase', color: colors.label, padding: '10px 14px',
+      textAlign: right ? 'right' : 'left', borderBottom: `1px solid ${colors.border}`,
+      whiteSpace: wrap ? 'normal' : 'nowrap',
+    }}>{children}</th>
+  )
+  const TD = ({ children, right, muted, bold }: { children: React.ReactNode; right?: boolean; muted?: boolean; bold?: boolean }) => (
+    <td style={{
+      fontFamily: fonts.sans, fontSize: '13px', padding: '11px 14px',
+      textAlign: right ? 'right' : 'left',
+      color: muted ? colors.muted : bold ? colors.ink : colors.body,
+      fontWeight: bold ? 600 : 400,
+      fontVariantNumeric: 'tabular-nums',
+    }}>{children}</td>
+  )
+  const fmtCurrency = (n: number | null) => n != null ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'
+  const fmtNum = (n: number | null) => n != null ? n.toLocaleString('en-US') : '—'
+
+  return (
+    <Surface padding="0">
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: colors.surfaceAlt }}>
+              <TH>Creative</TH>
+              <TH>Ad Group</TH>
+              <TH right>Impressions</TH>
+              <TH right>Clicks</TH>
+              <TH right wrap>Landing Page Views</TH>
+              <TH right>Leads</TH>
+              <TH right wrap>Amount Spent</TH>
+              <TH right>Cost / LPV</TH>
+              <TH right>Video Views</TH>
+              <TH right wrap>6-Sec Views</TH>
+              <TH right>100%</TH>
+            </tr>
+          </thead>
+          <tbody>
+            {creatives.map((c, i) => (
+              <tr key={c.id} style={{ background: i % 2 === 0 ? colors.surface : colors.surfaceAlt }}>
+                <TD><span style={{ fontWeight: 600, color: colors.ink }}>{tiktokLabel(c.name)}</span></TD>
+                <TD muted={!c.adgroupName}>{c.adgroupName ?? '—'}</TD>
+                <TD right>{fmtNum(c.impressions)}</TD>
+                <TD right>{fmtNum(c.clicks)}</TD>
+                <TD right>{fmtNum(c.landingPageViews)}</TD>
+                <TD right muted>—</TD>
+                <TD right>{fmtCurrency(c.amountSpent)}</TD>
+                <TD right muted={c.costPerLpv == null}>{fmtCurrency(c.costPerLpv)}</TD>
+                <TD right>{fmtNum(c.videoViews)}</TD>
+                <TD right>{fmtNum(c.videoViews6s)}</TD>
+                <TD right>{fmtNum(c.videoViewsP100)}</TD>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: `2px solid ${colors.borderStrong}`, background: colors.surfaceAlt }}>
+              <TD bold>Total (shown ads)</TD>
+              <TD muted>—</TD>
+              <TD right bold>{totalImpr.toLocaleString('en-US')}</TD>
+              <TD right bold>{totalClicks.toLocaleString('en-US')}</TD>
+              <TD right bold>{totalLpv.toLocaleString('en-US')}</TD>
+              <TD right muted>—</TD>
+              <TD right bold>{fmtCurrency(totalSpent)}</TD>
+              <TD right bold>{totalLpv > 0 ? fmtCurrency(totalSpent / totalLpv) : '—'}</TD>
+              <TD right bold>{totalViews.toLocaleString('en-US')}</TD>
+              <TD right bold>{totalViews6s.toLocaleString('en-US')}</TD>
+              <TD right bold>{totalP100.toLocaleString('en-US')}</TD>
             </tr>
           </tfoot>
         </table>
