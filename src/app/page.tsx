@@ -11,7 +11,8 @@ const CAMPAIGN_DATES = 'July 11 – August 2'
 
 const FOOTNOTES = [
   'atm-social is distributed only via Meta ads, so its traffic ≈ ad traffic.',
-  'Each channel below Meta Ads is a UTM-filtered slice of the at-the-movies page. Channels show real data only once their links carry the correct UTM (utm_campaign=atm_2026).',
+  '"Paid Ads" groups campaign-wide metrics — GA4 page-path traffic, HubSpot form submissions, and follow-up email — because all paid platforms drive to the same landing pages and forms. "Meta Landing Views" under Meta Ads is Meta\'s own attribution, a distinct figure from the shared GA4 Page Views.',
+  'The channel sections below (Podcast, Movie Theaters, Email, Organic Social) are UTM-filtered slices of the at-the-movies page. Channels show real data only once their links carry the correct UTM (utm_campaign=atm_2026).',
   '"Church Facing" = at-the-movies traffic with no campaign UTM (direct/organic member visits).',
   'HubSpot form views run higher than GA4 page views due to differences in how each tool tracks; GA4 is the more reliable traffic figure.',
   'Meta numbers are pulled live from the Meta Marketing API, filtered to the ATM 2026 campaign. data/meta.json remains as a fallback only.',
@@ -120,11 +121,11 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Meta Ad ────────────────────────────────────────── */}
+      {/* ── Paid Ads (shared, campaign-wide) ────────────────── */}
       <section className="fade-up-2" style={{ marginBottom: '52px' }}>
         <SectionHeader
-          title="Meta Ads"
-          sub="atm-social · all traffic"
+          title="Paid Ads"
+          sub="Campaign-wide · all paid platforms drive to the same landing pages & forms"
           accent={colors.orange}
           marginBottom="16px"
         />
@@ -132,21 +133,12 @@ export default async function DashboardPage() {
           <StatCard label="GA4 Page Views" value={fmt(d.metaAd.pageViews.value)} color={colors.orange} />
           <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
           <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
-          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.orange} />
-          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API" color={colors.lpGray} />
-          {d.metaAd.costPerLead != null && (
-            <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.lpGray} />
-          )}
-          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.orange} />
-          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.orange} />
+          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.slate} />
+          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
+          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
         </div>
 
-        {d.meta.creatives.length > 0 && (
-          <div style={{ marginBottom: '16px' }}>
-            <MetaCreativesTable creatives={d.meta.creatives} totalAmountSpent={d.meta.totalAmountSpent} />
-          </div>
-        )}
-
+        {/* Shared GA4 + form charts — total landing-page traffic, single-line (not per-platform). */}
         <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
           <ChartPanel title="Page Views" accent={colors.orange}>
             <TrendChart series={[{ key: 'pageViews', label: 'page views', color: colors.orange, data: d.metaAd.pageViews.history }]} />
@@ -157,6 +149,36 @@ export default async function DashboardPage() {
           <ChartPanel title="Form Submissions" accent={colors.slate}>
             <TrendChart series={[{ key: 'submissions', label: 'submissions', color: colors.slate, data: d.metaAd.formSubmissions.history }]} />
           </ChartPanel>
+        </div>
+        {d.seeded && (
+          <div style={{ fontFamily: fonts.sans, fontSize: '12px', color: colors.muted, marginTop: '10px', paddingLeft: '4px' }}>
+            Pre–Jun 16 trend points are illustrative placeholders until automated history accrues.
+          </div>
+        )}
+      </section>
+
+      {/* ── Meta Ad ────────────────────────────────────────── */}
+      <section className="fade-up-2" style={{ marginBottom: '52px' }}>
+        <SectionHeader
+          title="Meta Ads"
+          sub="atm-social · Meta-attributed platform metrics"
+          accent={colors.orange}
+          marginBottom="16px"
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API · Meta-attributed" color={colors.lpGray} />
+          {d.metaAd.costPerLead != null && (
+            <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.lpGray} />
+          )}
+        </div>
+
+        {d.meta.creatives.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <MetaCreativesTable creatives={d.meta.creatives} totalAmountSpent={d.meta.totalAmountSpent} />
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: GRID_2, gap: '16px' }}>
           <ChartPanel title="Meta Landing Page Views" accent={colors.lpGray}>
             <TrendChart series={[{ key: 'meta', label: 'landing views', color: colors.lpGray, data: d.meta.history }]} />
           </ChartPanel>
