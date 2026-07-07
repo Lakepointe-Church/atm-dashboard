@@ -130,13 +130,9 @@ export default async function DashboardPage() {
           accent={colors.orange}
           marginBottom="16px"
         />
+        {/* Row 1 — campaign-wide KPIs. Video Views is promoted to 2nd position. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           <StatCard label="GA4 Page Views" value={fmt(d.metaAd.pageViews.value)} color={colors.orange} />
-          <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
-          <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
-          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.slate} />
-          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
-          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
           {(() => {
             // Combined Video Views = Meta 3-sec plays + TikTok 6-sec views.
             // PARTIAL-DATA RULE: a sum missing an input is not the metric. If
@@ -150,13 +146,24 @@ export default async function DashboardPage() {
                   label="Video Views"
                   value={fmt(metaVV + tiktokVV)}
                   sub="Meta 3-sec plays + TikTok 6-sec views · platform-reported"
-                  color={colors.slate}
+                  color={colors.orange}
                 />
               )
             }
             const missing = [metaVV == null && 'Meta', tiktokVV == null && 'TikTok'].filter(Boolean).join(' + ')
             return <PlaceholderCard label="Video Views" note={`Awaiting ${missing} data`} />
           })()}
+          <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
+          <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
+          <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.slate} />
+        </div>
+
+        {/* Row 2 — follow-up email KPIs on their own line (a deliberate break, so
+            row 1 doesn't leave a single orphaned card). Width is capped so the
+            pair reads as ~1-card-wide each, matching row 1, instead of stretching. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 210px))', gap: '16px', marginBottom: '16px' }}>
+          <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
+          <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
         </div>
 
         {/* Shared GA4 + form charts — total landing-page traffic, single-line (not per-platform). */}
