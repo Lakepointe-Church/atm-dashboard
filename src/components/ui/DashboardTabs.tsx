@@ -19,41 +19,47 @@ const TABS: { key: ChannelTab; label: string }[] = [
 
 const ActiveTabContext = createContext<ChannelTab>('all')
 
-export function DashboardTabs({ children }: { children: ReactNode }) {
+export function DashboardTabs({ syncInfo, children }: { syncInfo?: ReactNode; children: ReactNode }) {
   const [active, setActive] = useState<ChannelTab>('all')
 
   return (
     <>
-      <nav
-        aria-label="Filter by channel"
-        style={{
-          display: 'flex', flexWrap: 'wrap', gap: '6px',
-          background: colors.surface, border: `1px solid ${colors.border}`,
-          borderRadius: '999px', padding: '5px', boxShadow: shadow.sm,
-          width: 'fit-content', marginBottom: '36px',
-        }}
-      >
-        {TABS.map(t => {
-          const isActive = active === t.key
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActive(t.key)}
-              aria-pressed={isActive}
-              style={{
-                fontFamily: fonts.sans, fontSize: '13px', fontWeight: 600,
-                letterSpacing: '0.02em', padding: '8px 18px', borderRadius: '999px',
-                border: 'none', cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
-                background: isActive ? colors.orange : 'transparent',
-                color: isActive ? '#FFFFFF' : colors.label,
-              }}
-            >
-              {t.label}
-            </button>
-          )
-        })}
-      </nav>
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+        gap: '12px', marginBottom: '36px',
+      }}>
+        <nav
+          aria-label="Filter by channel"
+          style={{
+            display: 'flex', flexWrap: 'wrap', gap: '6px',
+            background: colors.surface, border: `1px solid ${colors.border}`,
+            borderRadius: '999px', padding: '5px', boxShadow: shadow.sm,
+            width: 'fit-content',
+          }}
+        >
+          {TABS.map(t => {
+            const isActive = active === t.key
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActive(t.key)}
+                aria-pressed={isActive}
+                style={{
+                  fontFamily: fonts.sans, fontSize: '13px', fontWeight: 600,
+                  letterSpacing: '0.02em', padding: '8px 18px', borderRadius: '999px',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
+                  background: isActive ? colors.orange : 'transparent',
+                  color: isActive ? '#FFFFFF' : colors.label,
+                }}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </nav>
+        {syncInfo}
+      </div>
       <ActiveTabContext.Provider value={active}>
         {children}
       </ActiveTabContext.Provider>

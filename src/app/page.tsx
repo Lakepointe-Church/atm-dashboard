@@ -60,6 +60,9 @@ export default async function DashboardPage() {
         <div style={{ fontFamily: fonts.sans, fontSize: '15px', color: colors.body, marginBottom: '18px' }}>
           Campaign performance · {CAMPAIGN_DATES}
         </div>
+      </header>
+
+      <DashboardTabs syncInfo={
         <div style={{
           display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 14px',
           fontFamily: fonts.sans, fontSize: '12px', color: colors.label,
@@ -76,9 +79,7 @@ export default async function DashboardPage() {
             </>
           )}
         </div>
-      </header>
-
-      <DashboardTabs>
+      }>
 
       <FilterSection category="all">
       {/* ── Campaign Summary Strip ──────────────────────────── */}
