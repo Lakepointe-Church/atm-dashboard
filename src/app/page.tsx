@@ -80,6 +80,7 @@ export default async function DashboardPage() {
 
       <DashboardTabs>
 
+      <FilterSection category="all">
       {/* ── Campaign Summary Strip ──────────────────────────── */}
       <section className="fade-up-2" style={{ marginBottom: '52px' }}>
         <SectionHeader title="Campaign Summary" sub="All channels · at-a-glance totals" marginBottom="16px" />
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
           </ChartPanel>
         </div>
       </section>
+      </FilterSection>
 
       <FilterSection category="paid">
       {/* ── Paid Ads (shared, campaign-wide) ────────────────── */}
