@@ -127,6 +127,9 @@ export async function fetchMetaData(): Promise<MetaData> {
 
   const totalLpv = running
   const totalSpend = dailyRows.reduce((s, r) => s + parseFloat(r.spend ?? '0'), 0)
+  // 3-second video plays = actions[].video_view (NOT the video_play_actions field,
+  // which counts total plays ~4.5× higher). Confirmed via discovery pull, Jul 2026.
+  const totalVideoPlays3s = dailyRows.reduce((s, r) => s + findAction(r.actions, 'video_view'), 0)
   const lastDate = dailyRows.at(-1)?.date_start ?? new Date().toISOString().split('T')[0]
 
   const adIds = adRows.map(r => r.ad_id).filter(Boolean) as string[]
@@ -152,6 +155,7 @@ export async function fetchMetaData(): Promise<MetaData> {
       amountSpent: parseFloat(spent.toFixed(2)),
       costPerLpv: lpv > 0 ? parseFloat((spent / lpv).toFixed(2)) : null,
       costPerLead: leads > 0 ? parseFloat((spent / leads).toFixed(2)) : null,
+      videoPlays3s: findAction(row.actions, 'video_view'),
     }
   })
 
@@ -159,6 +163,7 @@ export async function fetchMetaData(): Promise<MetaData> {
     lastUpdated: lastDate,
     landingPageViews: totalLpv,
     totalAmountSpent: parseFloat(totalSpend.toFixed(2)),
+    videoPlays3s: totalVideoPlays3s,
     note: 'Live from Meta Marketing API.',
     history,
     creatives,

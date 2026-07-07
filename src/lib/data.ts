@@ -54,6 +54,8 @@ export type MetaCreative = {
   amountSpent: number | null
   costPerLpv: number | null
   costPerLead: number | null
+  /** 3-second video plays (actions[].video_view). null when unavailable (fallback). */
+  videoPlays3s: number | null
 }
 
 /** The Meta (manual) data, read from /data/meta.json. */
@@ -61,6 +63,12 @@ export type MetaData = {
   lastUpdated: string
   landingPageViews: number
   totalAmountSpent: number | null
+  /**
+   * Total 3-second video plays across all ATM ads (Meta actions[].video_view).
+   * null = live API pull failed / creds absent (fell back to meta.json, which
+   * has no video data) → card renders awaiting, never 0. A real 0 is a number.
+   */
+  videoPlays3s: number | null
   note: string
   history: MetricPoint[]
   creatives: MetaCreative[]
@@ -260,6 +268,8 @@ async function getMeta(): Promise<MetaData> {
     lastUpdated: raw.last_updated,
     landingPageViews: raw.landing_page_views,
     totalAmountSpent: raw.total_amount_spent ?? null,
+    // meta.json has no video data — awaiting, not a real 0.
+    videoPlays3s: null,
     note: raw.note,
     history: raw.history.map((h) => ({ date: h.date, value: h.landing_page_views })),
     creatives: (raw.creatives ?? []).map((c) => ({
@@ -276,6 +286,7 @@ async function getMeta(): Promise<MetaData> {
       amountSpent: c.amount_spent,
       costPerLpv: c.cost_per_lpv,
       costPerLead: null,
+      videoPlays3s: null,
     })),
   }
 }

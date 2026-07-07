@@ -137,6 +137,26 @@ export default async function DashboardPage() {
           <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.slate} />
           <StatCard label="Follow-up Email Views" value={fmt(d.utmChannels.metaFollowupEmail.pageViews.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
           <StatCard label="Follow-up Email Users" value={fmt(d.utmChannels.metaFollowupEmail.activeUsers.value)} sub="HubSpot freebie · utm_medium=email" color={colors.lpGray} />
+          {(() => {
+            // Combined Video Views = Meta 3-sec plays + TikTok 6-sec views.
+            // PARTIAL-DATA RULE: a sum missing an input is not the metric. If
+            // either platform's value is absent (pull failed / creds absent),
+            // render awaiting and name the missing source — never the lone total.
+            const metaVV = d.meta.videoPlays3s
+            const tiktokVV = d.tiktok ? d.tiktok.videoViews6s : null
+            if (metaVV != null && tiktokVV != null) {
+              return (
+                <StatCard
+                  label="Video Views"
+                  value={fmt(metaVV + tiktokVV)}
+                  sub="Meta 3-sec plays + TikTok 6-sec views · platform-reported"
+                  color={colors.slate}
+                />
+              )
+            }
+            const missing = [metaVV == null && 'Meta', tiktokVV == null && 'TikTok'].filter(Boolean).join(' + ')
+            return <PlaceholderCard label="Video Views" note={`Awaiting ${missing} data`} />
+          })()}
         </div>
 
         {/* Shared GA4 + form charts — total landing-page traffic, single-line (not per-platform). */}
@@ -168,6 +188,10 @@ export default async function DashboardPage() {
         />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API · Meta-attributed" color={colors.lpGray} />
+          {d.meta.videoPlays3s != null
+            ? <StatCard label="3-Second Video Plays" value={fmt(d.meta.videoPlays3s)} sub="Meta API · 3-second plays" color={colors.slate} />
+            : <PlaceholderCard label="3-Second Video Plays" note="Awaiting Meta data" />
+          }
           {d.metaAd.costPerLead != null && (
             <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.lpGray} />
           )}
@@ -350,7 +374,9 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
   const totalImpressions = active.reduce((s, c) => s + (c.impressions ?? 0), 0)
   const totalLPV = active.reduce((s, c) => s + (c.landingPageViews ?? 0), 0)
   const totalLeads = active.reduce((s, c) => s + (c.leads ?? 0), 0)
+  const totalVideoPlays3s = active.reduce((s, c) => s + (c.videoPlays3s ?? 0), 0)
   const hasLeads = active.some(c => c.leads != null)
+  const hasVideoPlays = active.some(c => c.videoPlays3s != null)
 
   const TH = ({ children, right, wrap }: { children: React.ReactNode; right?: boolean; wrap?: boolean }) => (
     <th style={{
@@ -389,6 +415,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
               {hasLeads && <TH right>Cost / Lead</TH>}
               <TH right wrap>Amount Spent</TH>
               <TH right>Cost / LPV</TH>
+              {hasVideoPlays && <TH right wrap>3-Sec Plays</TH>}
             </tr>
           </thead>
           <tbody>
@@ -416,6 +443,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
                 {hasLeads && <TD right muted={c.costPerLead == null}>{fmtCurrency(c.costPerLead)}</TD>}
                 <TD right>{fmtCurrency(c.amountSpent)}</TD>
                 <TD right muted={c.costPerLpv == null}>{fmtCurrency(c.costPerLpv)}</TD>
+                {hasVideoPlays && <TD right muted={c.videoPlays3s == null}>{fmtNum(c.videoPlays3s)}</TD>}
               </tr>
             ))}
           </tbody>
@@ -430,6 +458,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
               {hasLeads && <TD right muted>—</TD>}
               <TD right bold>{fmtCurrency(totalAmountSpent)}</TD>
               <TD right muted>—</TD>
+              {hasVideoPlays && <TD right bold>{totalVideoPlays3s.toLocaleString('en-US')}</TD>}
             </tr>
           </tfoot>
         </table>
