@@ -4,6 +4,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Surface } from '@/components/ui/Surface'
 import { TrendChart } from '@/components/TrendChart'
+import { DashboardTabs, FilterSection } from '@/components/ui/DashboardTabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,6 +78,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      <DashboardTabs>
+
       {/* ── Campaign Summary Strip ──────────────────────────── */}
       <section className="fade-up-2" style={{ marginBottom: '52px' }}>
         <SectionHeader title="Campaign Summary" sub="All channels · at-a-glance totals" marginBottom="16px" />
@@ -122,6 +125,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      <FilterSection category="paid">
       {/* ── Paid Ads (shared, campaign-wide) ────────────────── */}
       <section className="fade-up-2" style={{ marginBottom: '52px' }}>
         <SectionHeader
@@ -224,7 +228,9 @@ export default async function DashboardPage() {
 
       {/* ── TikTok Ads ─────────────────────────────────────── */}
       <TiktokSection tiktok={d.tiktok} />
+      </FilterSection>
 
+      <FilterSection category="text">
       {/* ── Podcast ────────────────────────────────────────── */}
       <section className="fade-up-3" style={{ marginBottom: '44px' }}>
         <SectionHeader
@@ -264,7 +270,9 @@ export default async function DashboardPage() {
           <StatCard label="GA4 Active Users" value={fmt(d.utmChannels.movieTheaters.activeUsers.value)} color={colors.lpGray} />
         </div>
       </section>
+      </FilterSection>
 
+      <FilterSection category="email">
       {/* ── Email ──────────────────────────────────────────── */}
       <section className="fade-up-3" style={{ marginBottom: '44px' }}>
         <SectionHeader
@@ -303,7 +311,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       </section>
+      </FilterSection>
 
+      <FilterSection category="social">
       {/* ── Organic Social ─────────────────────────────────── */}
       <section className="fade-up-3" style={{ marginBottom: '52px' }}>
         <SectionHeader
@@ -319,8 +329,9 @@ export default async function DashboardPage() {
           <StatCard label="Groups Active Users" value={fmt(d.utmChannels.organicSocialGroups.activeUsers.value)} sub="utm_source=groups" color={colors.slate} />
         </div>
       </section>
+      </FilterSection>
 
-      {/* ── Footnotes ──────────────────────────────────────── */}
+      {/* ── Footnotes — always visible regardless of the active channel filter. */}
       <section className="fade-up-4">
         <SectionHeader title="How to read these numbers" accent={colors.lpGray} marginBottom="14px" />
         <Surface padding="22px 26px">
@@ -337,6 +348,8 @@ export default async function DashboardPage() {
           </ul>
         </Surface>
       </section>
+
+      </DashboardTabs>
     </main>
   )
 }
