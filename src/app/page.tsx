@@ -22,6 +22,7 @@ const FOOTNOTES = [
   'Text counts come from Rock\'s CTA Keyword report (ATM and MOVIES keywords), pulled separately from web analytics.',
   'Cost per lead = total Meta ad spend ÷ HubSpot form submissions.',
   'Reach counts unique people, de-duplicated by Meta. The campaign-wide Reach total is less than the sum of per-ad reach because one person can see several ads.',
+  'Cost per video play = ad spend ÷ platform-reported video views (Meta 3-second plays; TikTok 6-second views). The Paid Ads figure combines both platforms’ spend and views.',
 ]
 
 function fmt(n: number) {
@@ -161,6 +162,26 @@ export default async function DashboardPage() {
             const missing = [metaVV == null && 'Meta', tiktokVV == null && 'TikTok'].filter(Boolean).join(' + ')
             return <PlaceholderCard label="Video Views" note={`Awaiting ${missing} data`} />
           })()}
+          {(() => {
+            // Cost per Video Play = combined spend ÷ combined video views.
+            // Same partial-data rule as Video Views: both platforms or awaiting.
+            const metaVV = d.meta.videoPlays3s
+            const tiktokVV = d.tiktok ? d.tiktok.videoViews6s : null
+            const metaSpend = d.meta.totalAmountSpent
+            const tiktokSpend = d.tiktok ? d.tiktok.spend : null
+            if (metaVV != null && tiktokVV != null && metaSpend != null && tiktokSpend != null && metaVV + tiktokVV > 0) {
+              return (
+                <StatCard
+                  label="Cost per Video Play"
+                  value={`$${((metaSpend + tiktokSpend) / (metaVV + tiktokVV)).toFixed(2)}`}
+                  sub="combined spend ÷ video views"
+                  color={colors.orange}
+                />
+              )
+            }
+            const missing = [(metaVV == null || metaSpend == null) && 'Meta', (tiktokVV == null || tiktokSpend == null) && 'TikTok'].filter(Boolean).join(' + ')
+            return <PlaceholderCard label="Cost per Video Play" note={missing ? `Awaiting ${missing} data` : 'No video views yet'} />
+          })()}
           <StatCard label="GA4 Active Users" value={fmt(d.metaAd.activeUsers.value)} color={colors.slate} />
           <StatCard label="Form Submissions" value={fmt(d.metaAd.formSubmissions.value)} sub="HubSpot" color={colors.slate} />
           <StatCard label="Form Conversion" value={`${d.metaAd.conversionRate.toFixed(1)}%`} sub="submissions ÷ page views" color={colors.slate} />
@@ -210,6 +231,10 @@ export default async function DashboardPage() {
           {d.meta.videoPlays3s != null
             ? <StatCard label="3-Second Video Plays" value={fmt(d.meta.videoPlays3s)} sub="Meta API · 3-second plays" color={colors.slate} />
             : <PlaceholderCard label="3-Second Video Plays" note="Awaiting Meta data" />
+          }
+          {d.meta.videoPlays3s != null && d.meta.totalAmountSpent != null && d.meta.videoPlays3s > 0
+            ? <StatCard label="Cost per Video Play" value={`$${(d.meta.totalAmountSpent / d.meta.videoPlays3s).toFixed(2)}`} sub="spend ÷ 3-sec plays" color={colors.slate} />
+            : <PlaceholderCard label="Cost per Video Play" note="Awaiting Meta data" />
           }
           {d.metaAd.costPerLead != null && (
             <StatCard label="Cost per Lead" value={`$${d.metaAd.costPerLead.toFixed(2)}`} sub="total spend ÷ submissions" color={colors.lpGray} />
@@ -525,6 +550,10 @@ function TiktokSection({ tiktok }: { tiktok: TiktokData | null }) {
               <StatCard label="Video Views"       value={fmt(tiktok.videoViews)}              sub="video plays"         color={colors.slate} />
               <StatCard label="6-Sec Views"       value={fmt(tiktok.videoViews6s)}            sub="focused views"       color={colors.lpGray} />
               <StatCard label="100% Completions"  value={fmt(tiktok.videoViewsP100)}          sub="watched to end"      color={colors.lpGray} />
+              {tiktok.videoViews6s > 0
+                ? <StatCard label="Cost per Video Play" value={`$${(tiktok.spend / tiktok.videoViews6s).toFixed(2)}`} sub="spend ÷ 6-sec views" color={colors.lpGray} />
+                : <PlaceholderCard label="Cost per Video Play" note="No 6-sec views yet" />
+              }
             </div>
 
             {tiktok.creatives.length > 0 && (
@@ -542,7 +571,7 @@ function TiktokSection({ tiktok }: { tiktok: TiktokData | null }) {
         )
         : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-            {['Amount Spent', 'Impressions', 'Clicks', 'TikTok Landing Views', 'Video Views', '6-Sec Views', '100% Completions'].map(label => (
+            {['Amount Spent', 'Impressions', 'Clicks', 'TikTok Landing Views', 'Video Views', '6-Sec Views', '100% Completions', 'Cost per Video Play'].map(label => (
               <PlaceholderCard key={label} label={label} note="Awaiting TikTok API" />
             ))}
           </div>
