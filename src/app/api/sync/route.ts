@@ -3,6 +3,8 @@ import { ensureSchema, upsertMetrics } from '@/lib/db'
 import { fetchGA4Data } from '@/lib/ga4'
 import { fetchHubspotSubmissionCount } from '@/lib/hubspot'
 import { hasTiktokCreds, fetchTiktokData } from '@/lib/tiktok'
+import { hasMetaCreds, fetchMetaData } from '@/lib/meta'
+import { fetchRockSmsData } from '@/lib/rock'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,7 +69,51 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ ok: !tiktokError, date: today, metrics, tiktok, tiktokError })
+    // Meta: isolated so a Meta failure doesn't roll back the writes above. Spend
+    // stored in cents (metric_history.value is INTEGER), same convention as TikTok.
+    let meta: Record<string, number> | null = null
+    let metaError: string | null = null
+    if (hasMetaCreds()) {
+      try {
+        const md = await fetchMetaData()
+        meta = {
+          meta_spend_cents:         Math.round((md.totalAmountSpent ?? 0) * 100),
+          meta_landing_page_views:  md.landingPageViews,
+          meta_video_plays_3s:      md.videoPlays3s ?? 0,
+        }
+        await upsertMetrics(today, meta)
+      } catch (err) {
+        console.error('[sync] Meta error:', err)
+        metaError = String(err)
+      }
+    }
+
+    // Rock SMS: isolated, same reasoning. Keys are per-keyword since the
+    // campaign keyword set (CAMPAIGN_KEYWORDS in rock.ts) can grow.
+    let sms: Record<string, number> | null = null
+    let smsError: string | null = null
+    try {
+      const smsData = await fetchRockSmsData()
+      sms = {}
+      for (const k of smsData.keywords) {
+        sms[`sms_${k.keyword}_total`] = k.total
+        sms[`sms_${k.keyword}_new`] = k.new
+        sms[`sms_${k.keyword}_unique`] = k.unique
+      }
+      if (Object.keys(sms).length > 0) await upsertMetrics(today, sms)
+    } catch (err) {
+      console.error('[sync] Rock SMS error:', err)
+      smsError = String(err)
+    }
+
+    return NextResponse.json({
+      ok: !tiktokError && !metaError && !smsError,
+      date: today,
+      metrics,
+      tiktok, tiktokError,
+      meta, metaError,
+      sms, smsError,
+    })
   } catch (err) {
     console.error('[sync] error:', err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
