@@ -16,6 +16,15 @@ Full product spec: [`ATM_Dashboard_Spec.md`](ATM_Dashboard_Spec.md).
 - **Meta API — DONE & shipped (June 22, 2026).** Live Meta Marketing API integration
   replacing manual `data/meta.json` updates. Filtered to "ATM 2026" campaign only.
   All three data sources are now fully automatic — no manual updates required.
+- **Paid ads KPI expansion — July 14, 2026 (committed, awaiting prod deploy).**
+  (1) **Meta Reach** — KPI card in Meta Ads + per-ad column in the creatives table.
+  The table footer / KPI show the campaign-level de-duplicated total from a separate
+  lifetime insights query, never the sum of rows (see Meta row below). (2) **Cost per
+  Video Play** cards in Paid Ads (combined Meta+TikTok spend ÷ combined video views,
+  partial-data rule: awaiting unless both platforms report), Meta Ads (spend ÷ 3-sec
+  plays), and TikTok Ads (spend ÷ 6-sec views). (3) `/api/sync` now also stores
+  `meta_*` and `sms_*` metrics in Neon. Inspection routes live at
+  `/api/debug-{meta,hubspot,utm,tiktok,rock}` (fixed queries, no secrets in code).
 
 ## Live
 
@@ -30,9 +39,9 @@ Full product spec: [`ATM_Dashboard_Spec.md`](ATM_Dashboard_Spec.md).
 |--------|--------|-------------|
 | **GA4** | Live | `src/lib/ga4.ts` — service account auth via `GA4_SERVICE_ACCOUNT_KEY` + `GA4_PROPERTY_ID`. Two queries per load: daily breakdown (history) + totals. Filters `CONTAINS atm-social` and `CONTAINS at-the-movies`. Note: a malformed GA4 path `/at-the-https:/...` also matches — fixed by summing instead of overwriting. |
 | **HubSpot form submissions** | Live | `src/lib/hubspot.ts` — Service Key bearer token via `HUBSPOT_PRIVATE_APP_TOKEN`. Paginates `form-integrations/v1/submissions/forms/{formId}` (50/page) to count total; no `total` field in response. Form ID: `d2248827-6c54-4792-bf25-697ed9292e15`, Portal: `43908455`. |
-| **Meta landing page views** | Live | `src/lib/meta.ts` — System User token via `META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`. Calls `act_{id}/insights` with `filtering` scoped to campaign name `CONTAIN "ATM 2026"`. Fetches daily breakdown + per-ad creative stats. Returns full lifetime history on every request (no Neon needed). Falls back to `data/meta.json` if API fails. |
+| **Meta landing page views** | Live | `src/lib/meta.ts` — System User token via `META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`. Calls `act_{id}/insights` with `filtering` scoped to campaign name `CONTAIN "ATM 2026"`. Fetches daily breakdown + per-ad creative stats (incl. per-ad reach) + a separate lifetime totals query for campaign-wide **reach** — reach is de-duplicated unique people, so per-ad/daily values must NOT be summed (sum ≈ 761k vs true ~408k as of Jul 14, 2026). Returns full lifetime history on every request (no Neon needed). Falls back to `data/meta.json` if API fails (reach renders "awaiting", never 0). |
 | **TikTok Ads** | Live | `src/lib/tiktok.ts` — long-lived advertiser token via `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID`. Calls `report/integrated/get/` (v1.3, host `business-api.tiktok.com`, `Access-Token` header, `report_type=BASIC`) filtered by campaign_id `1869425945879842` ("ATM 2026" Smart+). Errors key off JSON `code` (0=ok), never HTTP status; non-zero throws with `message`+`request_id`. Scopes are **report-only** — `advertiser/info`, `campaign/get`, `ad/get` all return `code 40001` (so no account timezone or per-ad public URL via API; tz **confirmed UTC-06:00 fixed, no DST**, from the Ads Manager date picker — verified Jun 30, 2026 totals match exactly). `conversion` deliberately NOT surfaced (pixel-event optimization artifact, not leads). `stat_time_day` capped at 30-day spans → history chunked. On failure the section renders "awaiting data", never zeros. Sync stores `tiktok_*` keys (spend as cents). |
-| **Neon history** | Live | `src/lib/db.ts` + `DATABASE_URL` (set via Vercel Storage → `neon-atm`). `/api/sync` upserts one row per metric per day. Dashboard uses Neon history arrays when populated; falls back to GA4 direct history + `data/hubspot.json` when empty. |
+| **Neon history** | Live | `src/lib/db.ts` + `DATABASE_URL` (set via Vercel Storage → `neon-atm`). `/api/sync` upserts one row per metric per day — GA4/HubSpot metrics plus `meta_*` (spend as cents, landing views, 3-sec plays) and per-keyword `sms_*` counts; Meta and Rock SMS writes are isolated so one source failing doesn't roll back the others. Dashboard uses Neon history arrays when populated; falls back to GA4 direct history + `data/hubspot.json` when empty. |
 
 **Cron:** `vercel.json` runs `/api/sync` at `0 11 * * *` and `0 23 * * *` UTC (6am/6pm Central).
 **First sync:** June 19, 2026 — 4,941 atm-social views / 356 form submissions.
