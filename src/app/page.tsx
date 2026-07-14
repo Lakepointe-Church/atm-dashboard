@@ -21,6 +21,7 @@ const FOOTNOTES = [
   'UTM parameters are in place for all ads (utm_content=vid2/img1/img2/img3). VID 1 predates UTM setup and has no content tag.',
   'Text counts come from Rock\'s CTA Keyword report (ATM and MOVIES keywords), pulled separately from web analytics.',
   'Cost per lead = total Meta ad spend ÷ HubSpot form submissions.',
+  'Reach counts unique people, de-duplicated by Meta. The campaign-wide Reach total is less than the sum of per-ad reach because one person can see several ads.',
 ]
 
 function fmt(n: number) {
@@ -202,6 +203,10 @@ export default async function DashboardPage() {
         />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           <StatCard label="Meta Landing Views" value={fmt(d.meta.landingPageViews)} sub="Meta API · Meta-attributed" color={colors.lpGray} />
+          {d.meta.reach != null
+            ? <StatCard label="Reach" value={fmt(d.meta.reach)} sub="Meta API · unique people" color={colors.lpGray} />
+            : <PlaceholderCard label="Reach" note="Awaiting Meta data" />
+          }
           {d.meta.videoPlays3s != null
             ? <StatCard label="3-Second Video Plays" value={fmt(d.meta.videoPlays3s)} sub="Meta API · 3-second plays" color={colors.slate} />
             : <PlaceholderCard label="3-Second Video Plays" note="Awaiting Meta data" />
@@ -213,7 +218,7 @@ export default async function DashboardPage() {
 
         {d.meta.creatives.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
-            <MetaCreativesTable creatives={d.meta.creatives} totalAmountSpent={d.meta.totalAmountSpent} />
+            <MetaCreativesTable creatives={d.meta.creatives} totalAmountSpent={d.meta.totalAmountSpent} campaignReach={d.meta.reach} />
           </div>
         )}
 
@@ -389,9 +394,10 @@ function PlaceholderCard({ label, note, compact }: { label: string; note: string
 
 // ── Meta Ad Creatives table ──────────────────────────────────────────────────
 
-function MetaCreativesTable({ creatives, totalAmountSpent }: {
+function MetaCreativesTable({ creatives, totalAmountSpent, campaignReach }: {
   creatives: MetaCreative[]
   totalAmountSpent: number | null
+  campaignReach: number | null
 }) {
   const active = creatives.filter(c => c.status === 'active')
   const totalImpressions = active.reduce((s, c) => s + (c.impressions ?? 0), 0)
@@ -400,6 +406,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
   const totalVideoPlays3s = active.reduce((s, c) => s + (c.videoPlays3s ?? 0), 0)
   const hasLeads = active.some(c => c.leads != null)
   const hasVideoPlays = active.some(c => c.videoPlays3s != null)
+  const hasReach = active.some(c => c.reach != null)
 
   const TH = ({ children, right, wrap }: { children: React.ReactNode; right?: boolean; wrap?: boolean }) => (
     <th style={{
@@ -431,6 +438,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
             <tr style={{ background: colors.surfaceAlt }}>
               <TH>Creative</TH>
               <TH>Ad Set</TH>
+              {hasReach && <TH right>Reach</TH>}
               <TH>Impressions</TH>
               <TH right wrap>Outbound Clicks</TH>
               <TH right wrap>Landing Page Views</TH>
@@ -459,6 +467,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
                   )}
                 </TD>
                 <TD muted={!c.adsetName}>{c.adsetName ?? '—'}</TD>
+                {hasReach && <TD right muted={c.reach == null}>{fmtNum(c.reach)}</TD>}
                 <TD right>{fmtNum(c.impressions)}</TD>
                 <TD right muted={c.outboundClicks == null}>{fmtNum(c.outboundClicks)}</TD>
                 <TD right>{fmtNum(c.landingPageViews)}</TD>
@@ -474,6 +483,7 @@ function MetaCreativesTable({ creatives, totalAmountSpent }: {
             <tr style={{ borderTop: `2px solid ${colors.borderStrong}`, background: colors.surfaceAlt }}>
               <TD bold>Total (active ads)</TD>
               <TD muted>—</TD>
+              {hasReach && <TD right bold>{campaignReach != null ? campaignReach.toLocaleString('en-US') : '—'}</TD>}
               <TD right bold>{totalImpressions.toLocaleString('en-US')}</TD>
               <TD right muted>—</TD>
               <TD right bold>{totalLPV.toLocaleString('en-US')}</TD>

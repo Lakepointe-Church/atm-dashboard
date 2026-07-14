@@ -18,6 +18,7 @@ export function hasMetaCreds(): boolean {
 
 interface RawRow {
   impressions?: string
+  reach?: string
   spend?: string
   outbound_clicks?: { action_type: string; value: string }[]
   actions?: { action_type: string; value: string }[]
@@ -101,7 +102,7 @@ export async function fetchMetaData(): Promise<MetaData> {
     { field: 'campaign.name', operator: 'CONTAIN', value: 'ATM 2026' },
   ])
 
-  const [dailyRows, adRows] = await Promise.all([
+  const [dailyRows, adRows, totalRows] = await Promise.all([
     queryInsights({
       fields: 'impressions,spend,actions,outbound_clicks',
       time_increment: '1',
@@ -109,8 +110,15 @@ export async function fetchMetaData(): Promise<MetaData> {
       filtering: campaignFilter,
     }),
     queryInsights({
-      fields: 'ad_id,ad_name,adset_name,impressions,spend,actions,outbound_clicks',
+      fields: 'ad_id,ad_name,adset_name,impressions,reach,spend,actions,outbound_clicks',
       level: 'ad',
+      date_preset: 'maximum',
+      filtering: campaignFilter,
+    }),
+    // Lifetime totals row (no time_increment). Reach is de-duplicated people —
+    // daily or per-ad values can't be summed, so the true total needs its own query.
+    queryInsights({
+      fields: 'reach',
       date_preset: 'maximum',
       filtering: campaignFilter,
     }),
@@ -130,6 +138,8 @@ export async function fetchMetaData(): Promise<MetaData> {
   // 3-second video plays = actions[].video_view (NOT the video_play_actions field,
   // which counts total plays ~4.5× higher). Confirmed via discovery pull, Jul 2026.
   const totalVideoPlays3s = dailyRows.reduce((s, r) => s + findAction(r.actions, 'video_view'), 0)
+  const totalReachRaw = totalRows[0]?.reach
+  const totalReach = totalReachRaw != null ? parseInt(totalReachRaw, 10) : null
   const lastDate = dailyRows.at(-1)?.date_start ?? new Date().toISOString().split('T')[0]
 
   const adIds = adRows.map(r => r.ad_id).filter(Boolean) as string[]
@@ -149,6 +159,7 @@ export async function fetchMetaData(): Promise<MetaData> {
       utmContent: null,
       permalink: PERMALINK_OVERRIDES[row.ad_name ?? ''] ?? permalinks[id] ?? null,
       impressions: parseInt(row.impressions ?? '0', 10),
+      reach: row.reach != null ? parseInt(row.reach, 10) : null,
       outboundClicks: clicks,
       landingPageViews: lpv,
       leads: leads > 0 ? leads : null,
@@ -164,6 +175,7 @@ export async function fetchMetaData(): Promise<MetaData> {
     landingPageViews: totalLpv,
     totalAmountSpent: parseFloat(totalSpend.toFixed(2)),
     videoPlays3s: totalVideoPlays3s,
+    reach: totalReach,
     note: 'Live from Meta Marketing API.',
     history,
     creatives,

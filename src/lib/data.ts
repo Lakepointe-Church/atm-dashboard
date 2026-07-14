@@ -48,6 +48,8 @@ export type MetaCreative = {
   utmContent: string | null
   permalink: string | null
   impressions: number | null
+  /** Lifetime unique people reached by this ad. null when unavailable (fallback). */
+  reach: number | null
   outboundClicks: number | null
   landingPageViews: number | null
   leads: number | null
@@ -69,6 +71,12 @@ export type MetaData = {
    * has no video data) → card renders awaiting, never 0. A real 0 is a number.
    */
   videoPlays3s: number | null
+  /**
+   * Campaign-wide unique people reached (de-duplicated by Meta — NOT the sum of
+   * per-ad reach, which double-counts people who saw multiple ads). null =
+   * fallback/awaiting, never rendered as 0.
+   */
+  reach: number | null
   note: string
   history: MetricPoint[]
   creatives: MetaCreative[]
@@ -268,8 +276,9 @@ async function getMeta(): Promise<MetaData> {
     lastUpdated: raw.last_updated,
     landingPageViews: raw.landing_page_views,
     totalAmountSpent: raw.total_amount_spent ?? null,
-    // meta.json has no video data — awaiting, not a real 0.
+    // meta.json has no video or reach data — awaiting, not a real 0.
     videoPlays3s: null,
+    reach: null,
     note: raw.note,
     history: raw.history.map((h) => ({ date: h.date, value: h.landing_page_views })),
     creatives: (raw.creatives ?? []).map((c) => ({
@@ -280,6 +289,7 @@ async function getMeta(): Promise<MetaData> {
       utmContent: c.utm_content,
       permalink: null,
       impressions: c.impressions,
+      reach: null,
       outboundClicks: c.outbound_clicks,
       landingPageViews: c.landing_page_views,
       leads: null,
