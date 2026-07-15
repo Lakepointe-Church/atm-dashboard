@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { metaTimeRange, resolveCampaignFilter } from '@/lib/meta'
 
 const GRAPH_BASE = 'https://graph.facebook.com/v21.0'
 
@@ -9,24 +10,23 @@ export async function GET() {
   const accountId = process.env.META_AD_ACCOUNT_ID
   if (!token || !accountId) return NextResponse.json({ error: 'Meta creds not set' }, { status: 500 })
 
-  const campaignFilter = JSON.stringify([
-    { field: 'campaign.name', operator: 'CONTAIN', value: 'ATM 2026' },
-  ])
+  const campaignFilter = await resolveCampaignFilter()
+  const timeRange = metaTimeRange()
 
   const url = `${GRAPH_BASE}/act_${accountId}/insights?${new URLSearchParams({
     access_token: token,
     fields: 'ad_id,ad_name,impressions,reach',
     level: 'ad',
-    date_preset: 'maximum',
+    time_range: timeRange,
     filtering: campaignFilter,
     limit: '500',
   })}`
 
-  // Campaign-level lifetime totals (reach here is de-duplicated across ads).
+  // Campaign-level window totals (reach here is de-duplicated across ads).
   const totalsUrl = `${GRAPH_BASE}/act_${accountId}/insights?${new URLSearchParams({
     access_token: token,
     fields: 'impressions,reach',
-    date_preset: 'maximum',
+    time_range: timeRange,
     filtering: campaignFilter,
   })}`
 

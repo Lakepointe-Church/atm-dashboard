@@ -16,7 +16,7 @@ const FOOTNOTES = [
   'The channel sections below (Podcast, Movie Theaters, Email, Organic Social) are UTM-filtered slices of the at-the-movies page. Channels show real data only once their links carry the correct UTM (utm_campaign=atm_2026).',
   '"Church Facing" = at-the-movies traffic with no campaign UTM (direct/organic member visits).',
   'HubSpot form views run higher than GA4 page views due to differences in how each tool tracks; GA4 is the more reliable traffic figure.',
-  'Meta numbers are pulled live from the Meta Marketing API, filtered to the ATM 2026 campaign. data/meta.json remains as a fallback only.',
+  'Meta numbers are pulled live from the Meta Marketing API, filtered to the ATM 2026 and Brand Awareness – Video Views campaigns. data/meta.json remains as a fallback only.',
   'TikTok numbers are pulled live from the TikTok Marketing API (v1.3), filtered to the ATM 2026 Smart+ campaign. TikTok Landing Views is TikTok\'s own attribution — a distinct figure from GA4 Page Views. Leads show "—" because this campaign runs no lead event; its on-platform pixel conversions are an optimization signal, not lead counts, so they are not shown.',
   'UTM parameters are in place for all ads (utm_content=vid2/img1/img2/img3). VID 1 predates UTM setup and has no content tag.',
   'Text counts come from Rock\'s CTA Keyword report (ATM and MOVIES keywords), pulled separately from web analytics.',
