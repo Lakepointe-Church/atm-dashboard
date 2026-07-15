@@ -2,21 +2,6 @@ import type { MetaData, MetaCreative, MetricPoint } from './data'
 
 const GRAPH_BASE = 'https://graph.facebook.com/v21.0'
 
-// Campaigns included in the dashboard. Matched case-insensitively as substrings
-// against campaign names, then filtered by campaign.id — Meta's `filtering`
-// param ANDs conditions, so two CONTAIN filters can't express an OR.
-const CAMPAIGN_NAME_MATCHES = ['ATM 2026', 'Brand Awareness - Video Views']
-
-// Reporting window: June 10, 2026 → today, matching GA4/HubSpot. Without this,
-// Brand Awareness - Video Views (running since Mar 9, 2026) would pull in
-// pre-campaign history via date_preset=maximum.
-const META_START_DATE = '2026-06-10'
-
-export function metaTimeRange(): string {
-  const today = new Date().toISOString().split('T')[0]
-  return JSON.stringify({ since: META_START_DATE, until: today })
-}
-
 // Manually confirmed post URLs — these override whatever the API resolves.
 const PERMALINK_OVERRIDES: Record<string, string> = {
   'Ad 1 - IMG 1': 'https://www.facebook.com/permalink.php?story_fbid=1453154153524816&id=142188242493004',
@@ -78,39 +63,6 @@ async function queryInsights(extraParams: Record<string, string>): Promise<RawRo
   return rows
 }
 
-export async function resolveCampaignFilter(): Promise<string> {
-  const token = process.env.META_ACCESS_TOKEN!
-  const accountId = process.env.META_AD_ACCOUNT_ID!
-  const ids: string[] = []
-
-  let url: string | null = `${GRAPH_BASE}/act_${accountId}/campaigns?${new URLSearchParams({
-    access_token: token,
-    fields: 'name',
-    limit: '500',
-  })}`
-
-  while (url) {
-    const res = await fetch(url)
-    const json = (await res.json()) as {
-      data?: { id: string; name: string }[]
-      error?: { message: string; code: number }
-      paging?: { next?: string }
-    }
-    if (json.error) throw new Error(`Meta API (${json.error.code}): ${json.error.message}`)
-    for (const c of json.data ?? []) {
-      if (CAMPAIGN_NAME_MATCHES.some(m => c.name.toLowerCase().includes(m.toLowerCase()))) {
-        ids.push(c.id)
-      }
-    }
-    url = json.paging?.next ?? null
-  }
-
-  if (!ids.length) {
-    throw new Error(`Meta API: no campaigns matched ${CAMPAIGN_NAME_MATCHES.join(' / ')}`)
-  }
-  return JSON.stringify([{ field: 'campaign.id', operator: 'IN', value: ids }])
-}
-
 async function fetchPermalinks(adIds: string[], accountId: string): Promise<Record<string, string>> {
   if (!adIds.length) return {}
   const token = process.env.META_ACCESS_TOKEN!
@@ -146,27 +98,28 @@ async function fetchPermalinks(adIds: string[], accountId: string): Promise<Reco
 }
 
 export async function fetchMetaData(): Promise<MetaData> {
-  const campaignFilter = await resolveCampaignFilter()
-  const timeRange = metaTimeRange()
+  const campaignFilter = JSON.stringify([
+    { field: 'campaign.name', operator: 'CONTAIN', value: 'ATM 2026' },
+  ])
 
   const [dailyRows, adRows, totalRows] = await Promise.all([
     queryInsights({
       fields: 'impressions,spend,actions,outbound_clicks',
       time_increment: '1',
-      time_range: timeRange,
+      date_preset: 'maximum',
       filtering: campaignFilter,
     }),
     queryInsights({
       fields: 'ad_id,ad_name,adset_name,impressions,reach,spend,actions,outbound_clicks',
       level: 'ad',
-      time_range: timeRange,
+      date_preset: 'maximum',
       filtering: campaignFilter,
     }),
-    // Window totals row (no time_increment). Reach is de-duplicated people —
+    // Lifetime totals row (no time_increment). Reach is de-duplicated people —
     // daily or per-ad values can't be summed, so the true total needs its own query.
     queryInsights({
       fields: 'reach',
-      time_range: timeRange,
+      date_preset: 'maximum',
       filtering: campaignFilter,
     }),
   ])
